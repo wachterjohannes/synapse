@@ -3,8 +3,11 @@
 namespace App\Ai;
 
 use App\Brain\Brain;
+use Mcp\Capability\Attribute\McpTool;
+use Mcp\Schema\ToolAnnotations;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 
+#[McpTool(name: 'save_to_inbox', description: 'Saves raw material as a new note in the inbox.')]
 #[AsTool('save_to_inbox', 'Saves raw, unsorted material as a new note in the inbox. Use this when you are unsure where the material belongs.')]
 final class SaveToInbox
 {

@@ -2,10 +2,10 @@ mcp:
     servers:
         default:
             # Use the MCP SDK attributes to declare tools, prompts and resources on your services.
-            # Once MCP services exist, restrict the registry to their namespace(s), e.g. 'App\Mcp\'.
+            # Once MCP services exist, restrict the registry to their namespace(s), e.g. 'App\Ai\'.
             # Namespace patterns must match at least one registered MCP service.
             # '*' also exposes MCP services from third-party bundles over HTTP.
-            registry: 'App\Mcp\'
+            registry: 'App\Ai\'
 
             http:
                 path: /mcp

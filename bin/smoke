@@ -115,6 +115,10 @@ if php bin/console debug:router --raw 2>/dev/null | grep -q '/mcp'; then
         check "an admin may write" "mcp $MCP $ADMIN '$WRITE' | grep -q 'Saved inbox'"
         BRAIN='{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"save_to_brain","arguments":{"path":"topics/smoke.md","type":"Topic","title":"Smoke","description":"x","tags":["x"],"body":"# Smoke"}}}'
         check "a reader may not write to the brain either" "mcp $MCP $READER '$BRAIN' | grep -q 'may only read'"
+        # every tool the server lists, not just the two above: a tool added later is checked too
+        GUARDS=$(php tools/guard-check.php $MCP $READER notes 2>&1); GUARD_RC=$?
+        echo "$GUARDS"
+        check "every tool is either read-only or refused for a reader" "[ $GUARD_RC = 0 ]"
     fi
 
     if php bin/console list app --raw | grep -q '^app:federate'; then

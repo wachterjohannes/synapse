@@ -2,10 +2,13 @@
 
 namespace App\Ai;
 
+use Mcp\Capability\Attribute\McpTool;
+use Mcp\Schema\ToolAnnotations;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 use Symfony\AI\Store\RetrieverInterface;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 
+#[McpTool(name: 'search_notes', description: 'Searches the brain and returns the best matching passages with the file they come from.', annotations: new ToolAnnotations(readOnlyHint: true))]
 #[AsTool('search_notes', 'Searches the brain and returns the best matching passages as a JSON list of source and text.')]
 final class SearchNotes
 {

@@ -3,8 +3,11 @@
 namespace App\Ai;
 
 use App\Brain\Brain;
+use Mcp\Capability\Attribute\McpTool;
+use Mcp\Schema\ToolAnnotations;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 
+#[McpTool(name: 'read_note', description: 'Reads one note by the path list_notes or search_notes shows.', annotations: new ToolAnnotations(readOnlyHint: true))]
 #[AsTool('read_note', 'Reads one note. Pass the path exactly as list_notes shows it, for example "brain/topics/mcp.md" or "inbox/2026-10-27-idea.md".')]
 final class ReadNote
 {
