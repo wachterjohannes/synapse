@@ -1,0 +1,4 @@
+live_component:
+    resource: '@LiveComponentBundle/config/routes.php'
+    # Below /ui/ on purpose: the firewall, the access control and the headers of the page cover everything under it.
+    prefix: '/ui/_components'

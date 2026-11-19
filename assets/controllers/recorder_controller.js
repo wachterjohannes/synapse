@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 
 // Records from the microphone, sends the audio for transcription and puts the text into the textarea.
 export default class extends Controller {
-    static targets = ['text', 'button', 'status'];
+    static targets = ['text', 'button', 'label', 'status'];
     static values = { url: String };
 
     recorder = null;
@@ -24,8 +24,10 @@ export default class extends Controller {
             this.recorder.onstop = () => this.transcribe(stream, new Blob(chunks, { type: this.recorder.mimeType }));
             this.recorder.start();
             this.timer = setTimeout(() => this.recorder?.stop(), this.constructor.maxSeconds * 1000);
-            this.buttonTarget.textContent = 'Stop';
+            this.labelTarget.textContent = 'Stop';
             this.buttonTarget.dataset.recording = 'true';
+            this.buttonTarget.setAttribute('aria-pressed', 'true');
+            this.statusTarget.textContent = 'Recording...';
         } catch (error) {
             this.statusTarget.textContent = `No microphone: ${error.message}`;
         }
@@ -35,8 +37,9 @@ export default class extends Controller {
         clearTimeout(this.timer);
         stream.getTracks().forEach((track) => track.stop());
         this.recorder = null;
-        this.buttonTarget.textContent = 'Record';
+        this.labelTarget.textContent = 'Record';
         delete this.buttonTarget.dataset.recording;
+        this.buttonTarget.setAttribute('aria-pressed', 'false');
         this.statusTarget.textContent = 'Listening...';
 
         const form = new FormData();

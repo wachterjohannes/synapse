@@ -1,11 +1,178 @@
 @import "tailwindcss";
 
-/* The same paper, rust and terminal colours as the headers of the articles. */
-@theme {
-    --color-paper: #f3eee4;
-    --color-ink: #1a1a1a;
-    --color-rust: #b5372a;
-    --color-muted: #8f8a80;
-    --color-terminal: #23262c;
+/* The paper, ink and rust of the headers of the articles. The dark set keeps the same three roles. */
+:root {
+    color-scheme: light dark;
+    --paper: #f3eee4;
+    --surface: #fbf8f1;
+    --ink: #1f1d1a;
+    --muted: #6d675c;
+    --line: #d9d1c0;
+    --rust: #b5372a;
+    --rust-soft: #f1d9d3;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --paper: #17161a;
+        --surface: #1f1e23;
+        --ink: #ebe6db;
+        --muted: #a09a8d;
+        --line: #35333a;
+        --rust: #e47a68;
+        --rust-soft: #3a2420;
+    }
+}
+
+@theme inline {
+    --color-paper: var(--paper);
+    --color-surface: var(--surface);
+    --color-ink: var(--ink);
+    --color-muted: var(--muted);
+    --color-line: var(--line);
+    --color-rust: var(--rust);
+    --color-rust-soft: var(--rust-soft);
+    --font-serif: "Iowan Old Style", "Charter", "Palatino Linotype", Georgia, serif;
     --font-mono: ui-monospace, "DejaVu Sans Mono", monospace;
+}
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+    }
+    :focus-visible {
+        outline: 2px solid var(--rust);
+        outline-offset: 2px;
+    }
+    ::selection {
+        background: var(--rust-soft);
+    }
+}
+
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-md border border-ink px-4 py-2 text-sm font-medium transition-colors hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink;
+    }
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-md border border-ink bg-ink px-4 py-2 text-sm font-medium text-paper transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50;
+    }
+    .btn-small {
+        @apply px-3 py-1 text-xs;
+    }
+    .field {
+        @apply w-full rounded-md border border-line bg-surface p-3 text-base leading-relaxed placeholder:text-muted focus:border-ink;
+    }
+    .eyebrow {
+        @apply text-xs font-bold uppercase tracking-[0.2em] text-rust;
+    }
+
+    /* Markdown of a note or an answer, as the server renders it. */
+    .md {
+        @apply leading-relaxed;
+        overflow-wrap: anywhere;
+    }
+    .md > :first-child {
+        margin-top: 0;
+    }
+    .md > :last-child {
+        margin-bottom: 0;
+    }
+    .md p,
+    .md ul,
+    .md ol,
+    .md pre,
+    .md blockquote,
+    .md table {
+        @apply mb-3;
+    }
+    .md h1,
+    .md h2,
+    .md h3,
+    .md h4 {
+        @apply mt-5 mb-2 font-serif font-bold leading-snug;
+    }
+    .md h1 {
+        @apply text-2xl;
+    }
+    .md h2 {
+        @apply text-xl;
+    }
+    .md h3,
+    .md h4 {
+        @apply text-lg;
+    }
+    .md ul {
+        @apply list-disc pl-6;
+    }
+    .md ol {
+        @apply list-decimal pl-6;
+    }
+    .md li + li {
+        @apply mt-1;
+    }
+    .md a {
+        @apply text-rust underline underline-offset-2;
+    }
+    .md code {
+        @apply rounded bg-line/60 px-1 py-0.5 font-mono text-[0.9em];
+    }
+    .md pre {
+        @apply overflow-x-auto rounded-md bg-line/60 p-3 text-sm;
+    }
+    .md pre code {
+        @apply bg-transparent p-0;
+    }
+    .md blockquote {
+        @apply border-l-2 border-line pl-4 text-muted;
+    }
+    .md table {
+        @apply w-full text-left text-sm;
+    }
+    .md th,
+    .md td {
+        @apply border-b border-line px-2 py-1;
+    }
+    .md hr {
+        @apply my-5 border-line;
+    }
+}
+
+/* A waiting answer and a recording both move, unless the visitor asked for less motion. */
+@keyframes synapse-pulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.35;
+        transform: scale(0.8);
+    }
+}
+
+@keyframes synapse-toast {
+    from {
+        opacity: 0;
+        transform: translateY(0.5rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.pulse-dot {
+    animation: synapse-pulse 1s ease-in-out infinite;
+}
+
+.toast-in {
+    animation: synapse-toast 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pulse-dot,
+    .toast-in,
+    .animate-pulse {
+        animation: none;
+    }
 }

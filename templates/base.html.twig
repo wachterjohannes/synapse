@@ -3,20 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <title>{% block title %}Synapse{% endblock %}</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><circle cx=%2232%22 cy=%2232%22 r=%2222%22 fill=%22%23b5372a%22/></svg>">
     {# The stylesheet is linked here and not imported from app.js: that import makes the importmap load an empty data: module, which the CSP does not allow. #}
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     {{ importmap('app', {nonce: csp_nonce()}) }}
 </head>
-<body class="bg-paper font-sans text-ink antialiased">
+<body class="bg-paper font-sans text-base text-ink antialiased">
 {% if app.user %}
-<nav class="mx-auto flex max-w-3xl gap-6 px-6 pt-6 text-sm font-bold uppercase tracking-widest">
-    <a href="{{ path('ui_index') }}" class="hover:text-rust">Brain</a>
-    <a href="{{ path('ui_notes') }}" class="hover:text-rust">Notes</a>
-    <a href="{{ logout_path() }}" class="ml-auto font-normal normal-case tracking-normal text-muted hover:text-rust">Sign out</a>
+{% set route = app.request.attributes.get('_route') %}
+<nav class="mx-auto flex max-w-5xl items-center gap-5 px-5 pt-5 text-sm sm:px-6" aria-label="Main">
+    <a href="{{ path('ui_index') }}" class="flex items-center gap-2 font-bold tracking-wide {{ route == 'ui_index' ? 'text-rust' : 'hover:text-rust' }}">
+        <twig:ux:icon name="lucide:brain" class="size-4" />Brain
+    </a>
+    <a href="{{ path('ui_notes') }}" class="flex items-center gap-2 font-bold tracking-wide {{ route in ['ui_notes', 'ui_note'] ? 'text-rust' : 'hover:text-rust' }}">
+        <twig:ux:icon name="lucide:notebook-text" class="size-4" />Notes
+    </a>
+    <a href="{{ logout_path() }}" class="ml-auto flex items-center gap-2 text-muted hover:text-rust">
+        <twig:ux:icon name="lucide:log-out" class="size-4" />Sign out
+    </a>
 </nav>
 {% endif %}
 {% block body %}{% endblock %}
+{# Short messages land here as turbo streams, see the toast controller. #}
+<div id="toasts" class="pointer-events-none fixed inset-x-4 bottom-4 z-10 flex flex-col items-end gap-2" aria-live="polite"></div>
 </body>
 </html>

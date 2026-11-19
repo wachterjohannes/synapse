@@ -1,40 +1,60 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-<main class="mx-auto max-w-3xl px-6 pt-12 pb-20">
-    <div class="text-xs font-bold uppercase tracking-[0.2em] text-rust">Symfony AI · Synapse</div>
-    <h1 class="mt-1 mb-1 text-5xl font-bold">Your second brain</h1>
-    <p class="mb-8 text-neutral-700">Capture a thought, or ask the notes a question. The same agents as the commands, with a voice if you like.</p>
+<main class="mx-auto max-w-5xl px-5 pt-10 pb-20 sm:px-6">
+    <div class="eyebrow">Symfony AI · Synapse</div>
+    <h1 class="mt-1 mb-2 font-serif text-4xl font-bold tracking-tight sm:text-5xl">Your second brain</h1>
+    <p class="mb-8 max-w-2xl text-muted">Capture a thought, or ask the notes a question. The same agents as the commands, with a voice if you like.</p>
 
-    <twig:Panel title="Capture">
-        <form action="{{ path('ui_capture') }}" method="post" data-turbo-stream
-              data-controller="recorder" data-recorder-url-value="{{ path('ui_transcribe') }}">
-            <textarea name="text" required rows="3" data-recorder-target="text"
-                      placeholder="Rough idea, a decision, a link..."
-                      class="w-full rounded-md border border-stone-400 bg-[#fffdf8] p-3"></textarea>
-            <div class="my-3 flex flex-wrap items-center gap-3">
-                <button class="rounded-md bg-ink px-4 py-2 text-white disabled:opacity-50" data-turbo-submits-with="Filing...">File it</button>
-                <twig:Mic />
-                <span class="text-sm text-muted" data-recorder-target="status"></span>
-            </div>
-        </form>
-        {# empty:hidden, so there is no dark bar before the first answer arrives #}
-        <twig:Terminal id="capture-out" class="empty:hidden" />
-    </twig:Panel>
+    <twig:SetupBanner :problems="problems" class="mb-8" />
 
-    <twig:Panel title="Ask" class="mt-8">
-        <form action="{{ path('ui_ask') }}" method="post" data-turbo-stream
-              data-controller="recorder" data-recorder-url-value="{{ path('ui_transcribe') }}">
-            <textarea name="question" required rows="2" data-recorder-target="text"
-                      placeholder="What did we decide about..."
-                      class="w-full rounded-md border border-stone-400 bg-[#fffdf8] p-3"></textarea>
-            <div class="my-3 flex flex-wrap items-center gap-3">
-                <button class="rounded-md bg-ink px-4 py-2 text-white disabled:opacity-50" data-turbo-submits-with="Asking...">Ask</button>
-                <twig:Mic />
-                <span class="text-sm text-muted" data-recorder-target="status"></span>
-            </div>
-        </form>
-        <div id="answers" class="space-y-4"></div>
+    <div class="grid gap-8 lg:grid-cols-2 lg:gap-10">
+        <twig:Panel title="Capture">
+            <form id="capture-form" action="{{ path('ui_capture') }}" method="post" data-turbo-stream
+                  data-controller="recorder shortcut" data-recorder-url-value="{{ path('ui_transcribe') }}">
+                <label for="capture-text" class="sr-only">What to capture</label>
+                <textarea id="capture-text" name="text" required rows="4" data-recorder-target="text"
+                          data-action="keydown->shortcut#submit"
+                          placeholder="Rough idea, a decision, a link..."
+                          class="field"></textarea>
+                <div class="my-3 flex flex-wrap items-center gap-2">
+                    <button class="btn-primary" data-turbo-submits-with="Filing...">
+                        <twig:ux:icon name="lucide:file-plus" class="size-4" />File it
+                    </button>
+                    <twig:Mic />
+                    <span class="text-sm text-muted" data-recorder-target="status" aria-live="polite"></span>
+                    <span class="ml-auto hidden items-center gap-1 text-xs text-muted sm:flex"><kbd class="font-sans">Ctrl</kbd> / <kbd class="font-sans">⌘</kbd> + <twig:ux:icon name="lucide:corner-down-left" class="size-3.5" /></span>
+                </div>
+            </form>
+            {# empty:hidden, so there is no empty card before the first reply arrives #}
+            <twig:Output id="capture-out" class="md empty:hidden" />
+        </twig:Panel>
+
+        <twig:Panel title="Ask">
+            <form id="ask-form" action="{{ path('ui_ask') }}" method="post" data-turbo-stream
+                  data-controller="recorder shortcut" data-recorder-url-value="{{ path('ui_transcribe') }}">
+                <label for="ask-text" class="sr-only">Your question</label>
+                <textarea id="ask-text" name="question" required rows="4" data-recorder-target="text"
+                          data-action="keydown->shortcut#submit"
+                          placeholder="What did we decide about..."
+                          class="field"></textarea>
+                <div class="my-3 flex flex-wrap items-center gap-2">
+                    <button class="btn-primary" data-turbo-submits-with="Asking...">
+                        <twig:ux:icon name="lucide:sparkles" class="size-4" />Ask
+                    </button>
+                    <twig:Mic />
+                    <span class="text-sm text-muted" data-recorder-target="status" aria-live="polite"></span>
+                    <span class="ml-auto hidden items-center gap-1 text-xs text-muted sm:flex"><kbd class="font-sans">Ctrl</kbd> / <kbd class="font-sans">⌘</kbd> + <twig:ux:icon name="lucide:corner-down-left" class="size-3.5" /></span>
+                </div>
+            </form>
+        </twig:Panel>
+    </div>
+
+    <twig:Panel title="Answers" class="mt-10">
+        <div id="answers" class="space-y-8">
+            {# only child while there is no answer, see the rule that hides it afterwards #}
+            <p class="text-sm text-muted [&:not(:only-child)]:hidden">Answers show up here, newest on top.</p>
+        </div>
     </twig:Panel>
 </main>
 {% endblock %}

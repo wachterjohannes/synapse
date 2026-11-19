@@ -3,9 +3,9 @@
 {% block title %}Sign in · Synapse{% endblock %}
 
 {% block body %}
-<main class="mx-auto max-w-sm px-6 pt-20 pb-20">
-    <div class="text-xs font-bold uppercase tracking-[0.2em] text-rust">Symfony AI · Synapse</div>
-    <h1 class="mt-1 mb-6 text-4xl font-bold">Sign in</h1>
+<main class="mx-auto max-w-sm px-5 pt-16 pb-20 sm:pt-24">
+    <div class="eyebrow">Symfony AI · Synapse</div>
+    <h1 class="mt-1 mb-6 font-serif text-4xl font-bold tracking-tight">Sign in</h1>
 
     {% if error %}
         <p class="mb-4 rounded-md border border-rust px-3 py-2 text-sm text-rust" role="alert">{{ error }}</p>
@@ -13,13 +13,11 @@
 
     <form action="{{ path('ui_login') }}" method="post" data-turbo="false">
         <label class="mb-1 block text-sm font-bold" for="username">User</label>
-        <input id="username" name="_username" value="{{ username ?: 'synapse' }}" required autocomplete="username"
-               class="mb-4 w-full rounded-md border border-stone-400 bg-[#fffdf8] p-3">
+        <input id="username" name="_username" value="{{ username ?: 'synapse' }}" required autocomplete="username" class="field mb-4">
         <label class="mb-1 block text-sm font-bold" for="password">Password</label>
-        <input id="password" type="password" name="_password" required autofocus autocomplete="current-password"
-               class="mb-4 w-full rounded-md border border-stone-400 bg-[#fffdf8] p-3">
+        <input id="password" type="password" name="_password" required autofocus autocomplete="current-password" class="field mb-4">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-        <button class="rounded-md bg-ink px-4 py-2 text-white">Sign in</button>
+        <button class="btn-primary">Sign in</button>
     </form>
     <p class="mt-6 text-sm text-muted">The password is <code>UI_PASSWORD</code> from <code>.env.local</code>.</p>
 </main>

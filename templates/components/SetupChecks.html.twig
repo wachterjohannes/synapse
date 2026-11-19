@@ -1,0 +1,16 @@
+{# The setup checks as a list: a symbol, what was checked, what is the case, and the fix to copy. #}
+{% props checks %}
+<ul {{ attributes.defaults({class: 'divide-y divide-line'}) }}>
+    {% for check in checks %}
+        <li class="py-3" data-check="{{ check.level.value }}">
+            <div class="flex items-baseline gap-3">
+                <span class="w-5 shrink-0 text-center font-bold {{ check.level.value == 'ok' ? 'text-emerald-700 dark:text-emerald-400' : (check.level.value == 'warning' ? 'text-amber-700 dark:text-amber-400' : 'text-rust') }}" aria-label="{{ check.level.value }}">{{ check.level.symbol }}</span>
+                <div>
+                    <div class="font-bold">{{ check.title }}</div>
+                    {% if check.detail %}<div class="text-sm text-muted">{{ check.detail }}</div>{% endif %}
+                    {% if check.fix %}<code class="mt-1 block break-words rounded bg-line/60 px-2 py-1 font-mono text-xs">{{ check.fix }}</code>{% endif %}
+                </div>
+            </div>
+        </li>
+    {% endfor %}
+</ul>

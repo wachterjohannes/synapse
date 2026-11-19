@@ -3,15 +3,9 @@
 namespace App\Controller;
 
 use App\Brain\Brain;
-use App\Brain\Note;
 use App\Brain\OkfValidator;
+use App\Markdown\MarkdownRenderer;
 use App\Security\UiGuard;
-use League\CommonMark\Environment\Environment as MarkdownEnvironment;
-use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
-use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
-use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
-use League\CommonMark\MarkdownConverter;
-use League\CommonMark\Event\DocumentParsedEvent;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,6 +16,8 @@ use Twig\Environment;
 /**
  * Looks through the notes in the browser and lets a person change the status of one. The status is the only thing
  * that can be changed here, and only through Brain::setStatus, which is not a tool of any agent.
+ * The list is the live component NotesBrowser. This controller keeps the page around it, the page of one note and the
+ * plain form post for a status change.
  */
 final class NotesController
 {
@@ -30,27 +26,18 @@ final class NotesController
         private readonly Environment $twig,
         private readonly UiGuard $ui,
         private readonly UrlGeneratorInterface $urls,
+        private readonly MarkdownRenderer $markdown,
     ) {
     }
 
     #[Route('/ui/notes', name: 'ui_notes', methods: ['GET'])]
-    public function list(Request $request): Response
+    public function list(): Response
     {
         if (null !== $off = $this->ui->disabled()) {
             return $off;
         }
-        $filter = $request->query->getString('status');
-        $groups = [];
-        $counts = array_fill_keys(OkfValidator::STATUSES, 0);
-        foreach ($this->brain->notes() as $note) {
-            $counts[$note->status] = ($counts[$note->status] ?? 0) + 1;
-            if ('' === $filter || $note->status === $filter) {
-                $groups[$note->type ?: 'Other'][] = $note;
-            }
-        }
-        ksort($groups);
-
-        return $this->page('notes/list.html.twig', ['groups' => $groups, 'counts' => $counts, 'filter' => $filter, 'statuses' => OkfValidator::STATUSES]);
+        // the list is a live component, it reads ?query= and ?status= itself
+        return $this->page('notes/list.html.twig', []);
     }
 
     #[Route('/ui/note', name: 'ui_note', methods: ['GET'])]
@@ -67,7 +54,7 @@ final class NotesController
 
         return $this->page('notes/show.html.twig', [
             'note' => $note,
-            'html' => $this->render($note),
+            'html' => $this->markdown->render($this->withoutTitle($note->body)),
             'statuses' => OkfValidator::STATUSES,
             'flash' => $request->query->getString('changed'),
         ]);
@@ -99,24 +86,10 @@ final class NotesController
         return $path;
     }
 
-    /**
-     * Note bodies come from agents and from web pages they read, so raw html is dropped and unsafe link targets
-     * are not allowed. The first heading repeats the title, which the page shows already. Links between notes ("/topics/mcp.md", from the brain root) lead to the page of that note.
-     */
-    private function render(Note $note): string
+    /** The first heading repeats the title, which the page shows already. */
+    private function withoutTitle(string $body): string
     {
-        $environment = new MarkdownEnvironment(['html_input' => 'strip', 'allow_unsafe_links' => false]);
-        $environment->addExtension(new CommonMarkCoreExtension());
-        $environment->addExtension(new GithubFlavoredMarkdownExtension());
-        $environment->addEventListener(DocumentParsedEvent::class, function (DocumentParsedEvent $event): void {
-            foreach ($event->getDocument()->iterator() as $node) {
-                if ($node instanceof Link && preg_match('#^/[^\s]*\.md\z#', $node->getUrl())) {
-                    $node->setUrl($this->urls->generate('ui_note', ['path' => 'brain'.$node->getUrl()]));
-                }
-            }
-        });
-
-        return (new MarkdownConverter($environment))->convert(preg_replace('/\A# [^\n]*\n+/', '', $note->body))->getContent();
+        return preg_replace('/\A# [^\n]*\n+/', '', $body) ?? $body;
     }
 
     /** @param array<string, mixed> $context */

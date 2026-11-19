@@ -1,6 +1,6 @@
 {# A titled section with the rule on top, as in the articles. #}
 {% props title %}
-<section {{ attributes.defaults({class: 'border-t-2 border-ink pt-5 pb-2'}) }}>
-    <h2 class="mb-3 text-sm font-bold uppercase tracking-widest">{{ title }}</h2>
+<section {{ attributes.defaults({class: 'border-t-2 border-ink pt-4 pb-2'}) }}>
+    <h2 class="eyebrow mb-3 text-ink">{{ title }}</h2>
     {% block content %}{% endblock %}
 </section>

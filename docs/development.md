@@ -4,7 +4,10 @@
 |---|---|
 | `src/Brain/` | `Vault` (the only code that touches files), `Brain`, `OkfValidator`, `Note`, the loader and the search |
 | `src/Ai/` | the tools of the agents |
+| `src/Setup/` | `Doctor`: the setup checks behind `app:doctor`, the setup page and the banner |
 | `src/Mcp/` | the MCP server, `ToolGuard` and the pass that wraps every tool |
+| `src/Markdown/`, `src/Ui/` | `MarkdownRenderer` (the only place that turns text of a note or an answer into HTML), `AnswerStream` (the turbo streams of one answer) |
+| `src/Twig/Components/` | `NotesBrowser`, the live component of the notes page. It lives below `/ui/_components/`, behind the firewall and `GuardLiveComponents` |
 | `src/Security/` | token handler, bearer challenge, the guard of the page |
 | `src/Controller/`, `templates/`, `assets/` | the page: Twig, Symfony UX, Turbo Streams, Tailwind through AssetMapper |
 | `config/okf.yaml` | the note types and their rules, read by the validator and by the agent |

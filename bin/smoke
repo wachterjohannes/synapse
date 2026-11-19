@@ -209,6 +209,12 @@ if [ -f src/Controller/UiController.php ]; then
     check "every script of the page carries the nonce" "[ \"\$(curl -s -u synapse:smoke-ui $UI/ | grep -o '<script[^>]*>' | grep -vc nonce)\" = 0 ]"
     check "an empty capture is answered without a model" "curl -s -u synapse:smoke-ui -X POST $UI/ui/capture -H 'X-Synapse-Ui: 1' -d text= | grep -q 'Write something first'"
     check "a capture that is too long is refused" "curl -s -u synapse:smoke-ui -X POST $UI/ui/capture -H 'X-Synapse-Ui: 1' --data-urlencode \"text=\$(head -c 9000 /dev/zero | tr '\\0' a)\" | grep -q 'too long'"
+    # A question is turned down in words while there is no index. Without a key to build one, the check gets a stand-in with the table of the store.
+    ASK=$(curl -s -u synapse:smoke-ui -X POST http://127.0.0.1:$DOWN_PORT/ui/ask -H 'X-Synapse-Ui: 1' -d question=hello)
+    if [ $LIVE = 0 ]; then
+        check "a question without an index gets a card that names the two commands" "echo \"\$ASK\" | grep -q 'ai:store:setup brain' && ! echo \"\$ASK\" | grep -q turbo-stream-source"
+        php -r '$p = new PDO("sqlite:" . getenv("BRAIN_DB")); $p->exec("CREATE TABLE IF NOT EXISTS brain (id TEXT PRIMARY KEY, vector TEXT NOT NULL, metadata TEXT)"); $p->exec("INSERT OR IGNORE INTO brain VALUES (\"1\", \"[0.1]\", \"{}\")");'
+    fi
     ASK=$(curl -s -u synapse:smoke-ui -X POST http://127.0.0.1:$DOWN_PORT/ui/ask -H 'X-Synapse-Ui: 1' -d question=hello)
     CARD=$(echo "$ASK" | grep -o 'id="answer-[0-9a-f]\{8\}"' | head -1 | sed 's/id="answer-\(.*\)"/\1/')
     check "an answer card shows a waiting hint with the id the stream removes, and opens its stream" "[ -n \"\$CARD\" ] && echo \"\$ASK\" | grep -q \"id=\\\"answer-\$CARD-wait\\\"\" && echo \"\$ASK\" | grep -q \"ask/\$CARD/stream\""
@@ -240,6 +246,13 @@ if [ -f src/Controller/UiController.php ]; then
         check "app:status refuses an unknown status" "! php bin/console app:status $NOTE approved </dev/null"
         check "both changes are in log.md" "grep -q 'status of $NOTE: draft to verified' notes/brain/log.md && grep -q 'status of $NOTE: verified to stable' notes/brain/log.md"
     fi
+    DOCTOR=$(php bin/console app:doctor </dev/null 2>&1); DOCTOR_RC=$?
+    check "app:doctor says what is missing and exits with 1" "[ $DOCTOR_RC = 1 ] && echo \"\$DOCTOR\" | grep -q 'COHERE_API_KEY=<your key>'"
+    NOTES_PAGE=$(curl -s -u synapse:smoke-ui $UI/ui/notes)
+    check "the notes page is a live component" "echo \"\$NOTES_PAGE\" | grep -q 'data-controller=\"live\"'"
+    check "the live component endpoints need the login" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -X POST $UI/ui/_components/NotesBrowser/setStatus -H 'Sec-Fetch-Site: same-origin')\" = 302 ]"
+    check "the live component endpoints need the sign of this page" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/_components/NotesBrowser/setStatus)\" = 403 ]"
+    check "the page loads nothing from another host" "! curl -s -u synapse:smoke-ui $UI/ | grep -qE '(src|href)=\"https?://'"
     if [ $LIVE = 1 ]; then
         # every stream answers once, so every try gets a new id
         for TRY in 1 2 3; do

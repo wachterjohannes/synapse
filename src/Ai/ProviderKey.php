@@ -20,12 +20,24 @@ final class ProviderKey
     ) {
     }
 
+    /** An empty SYNAPSE_PROVIDER means the default, as in the Kernel. */
+    public function provider(): string
+    {
+        return '' === $this->provider ? 'cohere' : $this->provider;
+    }
+
+    /** The variable that holds the key of the chosen provider. */
+    public function variable(): string
+    {
+        return 'huggingface' === $this->provider ? 'HUGGINGFACE_API_KEY' : 'COHERE_API_KEY';
+    }
+
     /** The message to show when the key of the chosen provider is empty, or null when it is set. */
     public function missing(): ?string
     {
-        [$name, $key] = 'huggingface' === $this->provider ? ['HUGGINGFACE_API_KEY', $this->huggingFace] : ['COHERE_API_KEY', $this->cohere];
+        $key = 'huggingface' === $this->provider ? $this->huggingFace : $this->cohere;
 
-        return '' === $key ? sprintf('%s is empty. Put it into .env.local, see the README.', $name) : null;
+        return '' === $key ? sprintf('%s is empty. Put it into .env.local, see the README.', $this->variable()) : null;
     }
 
     /** Federation reranks with Cohere whatever the provider is. */

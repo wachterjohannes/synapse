@@ -147,7 +147,9 @@ final class LoginTest extends BrowserTestCase
             $browser = $this->browser();
             $browser->request('GET', '/login');
             self::assertResponseStatusCodeSame(503);
-            self::assertStringContainsString('The UI is off', (string) $browser->getResponse()->getContent());
+            self::assertSelectorTextContains('h1', 'Almost there');
+            self::assertSelectorTextContains('[data-check="error"]', 'UI_PASSWORD');
+            self::assertStringNotContainsString('test-password', (string) $browser->getResponse()->getContent());
 
             $browser->request('GET', '/ui/notes', server: self::basicAuth(''));
             self::assertResponseStatusCodeSame(401, 'An empty password is no way in.');
@@ -155,31 +157,5 @@ final class LoginTest extends BrowserTestCase
             $browser->request('POST', '/ui/capture', ['text' => 'x'], server: self::fromThePage());
             self::assertResponseRedirects('/login');
         });
-    }
-
-    private function withEnv(string $name, string $value, callable $run): void
-    {
-        $server = $_SERVER[$name] ?? null;
-        $env = $_ENV[$name] ?? null;
-        $process = getenv($name);
-        $_SERVER[$name] = $_ENV[$name] = $value;
-        putenv($name.'='.$value);
-        self::ensureKernelShutdown();
-        try {
-            $run();
-        } finally {
-            self::ensureKernelShutdown();
-            null === $server ? $this->forget($_SERVER, $name) : $_SERVER[$name] = $server;
-            null === $env ? $this->forget($_ENV, $name) : $_ENV[$name] = $env;
-            false === $process ? putenv($name) : putenv($name.'='.$process);
-        }
-    }
-
-    /**
-     * @param array<string, mixed> $bag
-     */
-    private function forget(array &$bag, string $name): void
-    {
-        unset($bag[$name]);
     }
 }

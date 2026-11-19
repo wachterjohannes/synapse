@@ -1,6 +1,18 @@
-{# Last event of an answer: removing the source element closes the EventSource, so the browser does not ask again. #}
-<turbo-stream action="update" target="answer-{{ id }}-actions">
-    <template><button type="button" data-action="speak#play" class="rounded-md border border-ink px-3 py-1 text-sm">Read it aloud</button><audio controls hidden data-speak-target="audio" class="mt-2 w-full"></audio></template>
+{# Last events of an answer. "html" is the answer as MarkdownRenderer made it, so it is not escaped again. It is null when the answer broke off. #}
+{# "plain" is the text of the model: it is what is read aloud and copied, and the template escapes it. #}
+{% if html is not null %}
+<turbo-stream action="update" target="answer-{{ id }}-text">
+    <template><div class="md">{{ html|raw }}</div></template>
 </turbo-stream>
+{% endif %}
+<turbo-stream action="update" target="answer-{{ id }}-actions">
+    <template>
+        <button type="button" data-action="speak#play" class="btn btn-small"><twig:ux:icon name="lucide:volume-2" class="size-3.5" />Read it aloud</button>
+        <button type="button" data-action="copy#copy" class="btn btn-small"><twig:ux:icon name="lucide:copy" class="size-3.5" /><span data-copy-target="label">Copy</span></button>
+        <div hidden data-speak-target="plain" data-copy-target="plain">{{ plain }}</div>
+        <audio controls hidden data-speak-target="audio" class="mt-2 w-full"></audio>
+    </template>
+</turbo-stream>
+{# Removing the source element closes the EventSource, so the browser does not ask again. #}
 <turbo-stream action="remove" target="answer-{{ id }}-source"></turbo-stream>
 <turbo-stream action="remove" target="answer-{{ id }}-wait"></turbo-stream>

@@ -1,0 +1,16 @@
+{# A short notice on the start page while the setup is not complete. Shows nothing when there are no problems. #}
+{% props problems, limit = 3 %}
+{% if problems %}
+<aside {{ attributes.defaults({class: 'rounded-lg border border-rust bg-rust-soft/40 px-4 py-3 text-sm', role: 'status'}) }} data-setup-banner>
+    <div class="mb-2 font-bold text-rust">{{ problems|length == 1 ? 'One thing is missing.' : 'A few things are missing.' }}</div>
+    <ul class="space-y-2">
+        {% for problem in problems|slice(0, limit) %}
+            <li>
+                <span class="font-bold">{{ problem.title }}</span>: {{ problem.detail }}
+                {% if problem.fix %}<code class="mt-1 block break-words rounded bg-line/60 px-2 py-1 font-mono text-xs">{{ problem.fix }}</code>{% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+    {% if problems|length > limit %}<p class="mt-2 text-muted">And {{ problems|length - limit }} more. Run <code class="font-mono">php bin/console app:doctor</code>.</p>{% endif %}
+</aside>
+{% endif %}

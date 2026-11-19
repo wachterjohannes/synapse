@@ -3,11 +3,12 @@
 namespace App\Controller;
 
 use App\Ai\ProviderKey;
+use App\Markdown\MarkdownRenderer;
 use App\Security\UiGuard;
+use App\Setup\Doctor;
+use App\Ui\AnswerStream;
 use App\Voice\Speech;
 use Symfony\AI\Agent\AgentInterface;
-use Symfony\AI\Platform\Result\Stream\Delta\TextDelta;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -43,22 +44,21 @@ final class UiController
     public function __construct(
         #[Target('capturer')]
         private readonly AgentInterface $capturer,
-        #[Target('reader')]
-        private readonly AgentInterface $reader,
         private readonly Speech $speech,
         private readonly Environment $twig,
         private readonly UiGuard $ui,
         private readonly ProviderKey $keys,
+        private readonly Doctor $doctor,
         private readonly CacheInterface $cache,
-        #[Autowire('%stream_answers%')]
-        private readonly bool $streamAnswers,
+        private readonly AnswerStream $answer,
+        private readonly MarkdownRenderer $markdown,
     ) {
     }
 
     #[Route('/', name: 'ui_index', methods: ['GET'])]
     public function index(): Response
     {
-        return $this->ui->disabled() ?? new Response($this->twig->render('ui/index.html.twig'));
+        return $this->ui->disabled() ?? new Response($this->twig->render('ui/index.html.twig', ['problems' => $this->doctor->problems()]));
     }
 
     #[Route('/ui/capture', name: 'ui_capture', methods: ['POST'])]
@@ -75,18 +75,20 @@ final class UiController
             null !== $missing = $this->keys->missing() => $missing,
             default => null,
         };
+        $filed = false;
         if (null === $reply) {
             if (null !== $limited = $this->ui->throttle($request)) {
                 return $limited;
             }
             try {
                 $reply = $this->capturer->call($text)->getContent();
+                $filed = true;
             } catch (\Throwable $e) {
                 $reply = 'That did not work: '.$e->getMessage();
             }
         }
 
-        return new Response($this->twig->render('ui/capture.stream.html.twig', ['reply' => $reply]), headers: ['Content-Type' => self::STREAM]);
+        return new Response($this->twig->render('ui/capture.stream.html.twig', ['reply' => $this->markdown->render((string) $reply, keepLineBreaks: true), 'filed' => $filed]), headers: ['Content-Type' => self::STREAM]);
     }
 
     #[Route('/ui/ask', name: 'ui_ask', methods: ['POST'])]
@@ -99,7 +101,7 @@ final class UiController
         $problem = match (true) {
             '' === $question => 'Ask something first.',
             mb_strlen($question) > self::MAX_QUESTION => sprintf('That question is too long. It can have %d characters, yours has %d.', self::MAX_QUESTION, mb_strlen($question)),
-            default => $this->keys->missing(),
+            default => $this->doctor->searchProblem(),
         };
 
         // A question that cannot be answered gets its card with the reason and no event stream, so nothing is called.
@@ -117,7 +119,7 @@ final class UiController
             return $response;
         }
         $question = trim($request->query->getString('q'));
-        if ('' === $question || mb_strlen($question) > self::MAX_QUESTION || null !== $this->keys->missing()) {
+        if ('' === $question || mb_strlen($question) > self::MAX_QUESTION || null !== $this->doctor->searchProblem()) {
             return new JsonResponse(['error' => 'No valid question.'], 400);
         }
 
@@ -147,32 +149,9 @@ final class UiController
             echo "retry: 600000\n\n";
             flush();
 
-            $waiting = true;
-            $stopWaiting = function () use (&$waiting, $id): void {
-                if ($waiting) {
-                    $waiting = false;
-                    $this->send('<turbo-stream action="remove" target="answer-'.$id.'-wait"></turbo-stream>');
-                }
-            };
-            try {
-                if (!$this->streamAnswers) {
-                    $this->send($this->fragment('append', 'answer-'.$id.'-text', htmlspecialchars($this->reader->call($question)->getContent())));
-                    $stopWaiting();
-                } else {
-                    foreach ($this->reader->call($question, ['stream' => true])->getContent() as $delta) {
-                        // the stream opens with empty deltas, long before the first word: the hint stays until there is text
-                        if ($delta instanceof TextDelta && '' !== $delta->getText()) {
-                            $stopWaiting();
-                            $this->send($this->fragment('append', 'answer-'.$id.'-text', htmlspecialchars($delta->getText())));
-                        }
-                    }
-                }
-            } catch (\Throwable $e) {
-                $stopWaiting();
-                $this->send($this->fragment('append', 'answer-'.$id.'-text', htmlspecialchars("\n\n(".$e->getMessage().')')));
+            foreach ($this->answer->events($id, $question) as $turboStream) {
+                $this->send($turboStream);
             }
-            $stopWaiting();
-            $this->send($this->twig->render('ui/done.stream.html.twig', ['id' => $id]));
         }, headers: ['Content-Type' => 'text/event-stream', 'Cache-Control' => 'no-cache', 'X-Accel-Buffering' => 'no']);
     }
 
@@ -241,10 +220,5 @@ final class UiController
         $turboStream = str_replace(["\r\n", "\r"], "\n", rtrim($turboStream));
         echo 'data: '.str_replace("\n", "\ndata: ", $turboStream)."\n\n";
         flush();
-    }
-
-    private function fragment(string $action, string $target, string $html): string
-    {
-        return \sprintf('<turbo-stream action="%s" target="%s"><template>%s</template></turbo-stream>', $action, $target, $html);
     }
 }

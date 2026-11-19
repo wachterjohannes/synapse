@@ -1,9 +1,9 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-<main class="mx-auto max-w-3xl px-6 pt-8 pb-20">
-    <h1 class="mb-3 text-3xl font-bold">No such note</h1>
-    <p class="mb-4 text-neutral-700">{{ message ?? 'This note does not exist, or it is not a finished note.' }}</p>
-    <a href="{{ path('ui_notes') }}" class="text-rust underline">Back to all notes</a>
-</main>
+<main class="mx-auto max-w-5xl px-5 pt-10 pb-20 sm:px-6"><div class="max-w-3xl">
+    <h1 class="mb-3 font-serif text-3xl font-bold">No such note</h1>
+    <p class="mb-4 text-muted">{{ message ?? 'This note does not exist, or it is not a finished note.' }}</p>
+    <a href="{{ path('ui_notes') }}" class="text-rust underline underline-offset-2">Back to all notes</a>
+</div></main>
 {% endblock %}

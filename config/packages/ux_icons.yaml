@@ -1,0 +1,11 @@
+ux_icons:
+    default_icon_attributes:
+        fill: currentColor
+        height: '1em'
+        width: '1em'
+        # the icons are decorative, the buttons next to them carry the words
+        aria-hidden: 'true'
+
+    # The icons are in assets/icons/ (imported with ux:icons:import). Nothing is fetched from the Iconify API at run time.
+    iconify:
+        on_demand: false

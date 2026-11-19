@@ -2,6 +2,7 @@
 
 namespace App\Ai;
 
+use App\Setup\Doctor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
@@ -15,7 +16,7 @@ final class SearchNotes
     public function __construct(
         #[Target('brain')]
         private readonly RetrieverInterface $retriever,
-        private readonly ProviderKey $keys,
+        private readonly Doctor $doctor,
     ) {
     }
 
@@ -24,7 +25,8 @@ final class SearchNotes
      */
     public function __invoke(string $query): string|ToolError
     {
-        if (null !== $missing = $this->keys->missing()) {
+        // An index that is not built would end in an exception from the store. The agent gets the reason in words instead.
+        if (null !== $missing = $this->doctor->searchProblem()) {
             return new ToolError($missing);
         }
 

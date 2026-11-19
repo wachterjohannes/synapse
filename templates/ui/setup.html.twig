@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Setup · Synapse{% endblock %}
+
+{% block body %}
+<main class="mx-auto max-w-3xl px-5 pt-10 pb-20 sm:px-6">
+    <div class="eyebrow">Symfony AI · Synapse</div>
+    <h1 class="mt-1 mb-2 font-serif text-4xl font-bold tracking-tight sm:text-5xl">Almost there</h1>
+    <p class="mb-8 text-muted">The page stays closed until <code>UI_PASSWORD</code> is set. These are the checks of the setup, with the fix for each. Reload this page when you are done. The same list is in <code>php bin/console app:doctor</code>.</p>
+
+    <twig:Panel title="Setup">
+        <twig:SetupChecks :checks="checks" />
+    </twig:Panel>
+</main>
+{% endblock %}

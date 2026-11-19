@@ -1,0 +1,65 @@
+{# The live part of the notes page, see App\Twig\Components\NotesBrowser. #}
+{% set counts = this.counts %}
+{% set active = this.activeStatus %}
+{# inside a component tag "this" is that component, so what the rows need is read here #}
+{% set statuses = this.statuses %}
+<div {{ attributes }}>
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="relative sm:w-80">
+            <twig:ux:icon name="lucide:search" class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
+            <input type="search" value="{{ query }}" data-model="debounce(250)|query" autocomplete="off"
+                   placeholder="Search title, text, tags" aria-label="Search the notes" class="field py-2 pl-9">
+        </div>
+        <div class="flex flex-wrap gap-2 text-sm" role="group" aria-label="Filter by status">
+            <button type="button" data-action="live#action" data-live-action-param="filter" data-live-status-param=""
+                    aria-pressed="{{ active == '' ? 'true' : 'false' }}"
+                    class="btn btn-small {{ active == '' ? 'bg-ink text-paper' : '' }}">All <span class="opacity-70">{{ this.total }}</span></button>
+            {% for status in statuses %}
+                <button type="button" data-action="live#action" data-live-action-param="filter" data-live-status-param="{{ status }}"
+                        aria-pressed="{{ active == status ? 'true' : 'false' }}"
+                        class="btn btn-small {{ active == status ? 'bg-ink text-paper' : '' }}">{{ status }} <span class="opacity-70">{{ counts[status] }}</span></button>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if error %}
+        <p class="mb-4 rounded-md border border-rust px-3 py-2 text-sm text-rust" role="alert">{{ error }}</p>
+    {% endif %}
+
+    <div data-loading="addClass(opacity-60)" class="transition-opacity">
+        {% for type, notes in this.groups %}
+            <twig:Panel title="{{ type }}" class="mb-8">
+                <ul class="divide-y divide-line">
+                    {% for note in notes %}
+                        <li class="py-3">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="min-w-0">
+                                    <a href="{{ path('ui_note', {path: note.path}) }}" class="font-serif text-lg font-bold leading-snug hover:text-rust">{{ note.title }}</a>
+                                    <div class="text-sm text-muted">{{ note.description }}</div>
+                                    <div class="mt-1 break-all font-mono text-xs text-muted">{{ note.path }}</div>
+                                </div>
+                                <twig:StatusBadge status="{{ note.status }}" class="shrink-0" />
+                            </div>
+                            <div class="mt-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="Set the status of {{ note.title }}">
+                                <span class="mr-1 text-xs text-muted">Mark as</span>
+                                {% for status in statuses %}
+                                    <button type="button" data-action="live#action" data-live-action-param="setStatus"
+                                            data-live-path-param="{{ note.path }}" data-live-to-param="{{ status }}"
+                                            {{ status == note.status ? 'disabled' }}
+                                            class="btn btn-small">{{ status }}</button>
+                                {% endfor %}
+                                {% if changed == note.path %}
+                                    <span class="ml-1 flex items-center gap-1 text-xs text-muted" role="status"><twig:ux:icon name="lucide:check" class="size-3.5 text-emerald-600 dark:text-emerald-400" />Saved. The change is in log.md.</span>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </twig:Panel>
+        {% else %}
+            <p class="text-muted">
+                {% if query or active %}No note matches{{ query ? ' "' ~ query ~ '"' }}{{ active ? ' with the status ' ~ active }}.{% else %}No notes yet.{% endif %}
+            </p>
+        {% endfor %}
+    </div>
+</div>

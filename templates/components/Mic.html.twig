@@ -1,5 +1,9 @@
-{# Records from the microphone and puts what was said into the textarea of the same form. #}
-<button type="button"
-        class="rounded-md border border-ink px-4 py-2 data-[recording=true]:border-rust data-[recording=true]:bg-rust data-[recording=true]:text-white"
+{# Records from the microphone and puts what was said into the textarea of the same form. While it records, the dot pulses. #}
+<button type="button" class="btn group data-[recording=true]:border-rust data-[recording=true]:bg-rust data-[recording=true]:text-white"
         data-action="recorder#toggle"
-        data-recorder-target="button">Record</button>
+        data-recorder-target="button"
+        aria-pressed="false">
+    <twig:ux:icon name="lucide:mic" class="size-4 group-data-[recording=true]:hidden" />
+    <span class="pulse-dot hidden size-2.5 rounded-full bg-white group-data-[recording=true]:inline-block"></span>
+    <span data-recorder-target="label">Record</span>
+</button>

@@ -3,11 +3,11 @@
 {% block title %}{{ note.title }} · Synapse{% endblock %}
 
 {% block body %}
-<main class="mx-auto max-w-3xl px-6 pt-8 pb-20">
+<main class="mx-auto max-w-5xl px-5 pt-10 pb-20 sm:px-6"><div class="max-w-3xl">
     <a href="{{ path('ui_notes') }}" class="text-sm text-muted hover:text-rust">&larr; All notes</a>
-    <div class="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-rust">{{ note.type ?: 'Note' }}</div>
-    <h1 class="mt-1 mb-2 text-4xl font-bold">{{ note.title }}</h1>
-    <p class="mb-6 text-neutral-700">{{ note.description }}</p>
+    <div class="eyebrow mt-4">{{ note.type ?: 'Note' }}</div>
+    <h1 class="mt-1 mb-2 font-serif text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{{ note.title }}</h1>
+    <p class="mb-6 text-muted">{{ note.description }}</p>
 
     <twig:Panel title="Status">
         <div class="mb-3 flex items-center gap-3">
@@ -17,12 +17,11 @@
         <form action="{{ path('ui_note_status') }}" method="post" class="flex flex-wrap gap-2">
             <input type="hidden" name="path" value="{{ note.path }}">
             {% for status in statuses %}
-                <button name="status" value="{{ status }}" {{ status == note.status ? 'disabled' }}
-                        class="rounded-md border border-ink px-3 py-1 text-sm hover:bg-ink hover:text-white disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink">{{ status }}</button>
+                <button name="status" value="{{ status }}" {{ status == note.status ? 'disabled' }} class="btn btn-small">{{ status }}</button>
             {% endfor %}
         </form>
         <dl class="mt-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-            <dt class="text-muted">Path</dt><dd class="font-mono">{{ note.path }}</dd>
+            <dt class="text-muted">Path</dt><dd class="break-all font-mono">{{ note.path }}</dd>
             {% if note.tags %}<dt class="text-muted">Tags</dt><dd>{{ note.tags|join(', ') }}</dd>{% endif %}
             {% if note.generatedBy %}<dt class="text-muted">Written by</dt><dd>{{ note.generatedBy }}{{ note.generatedAt ? ', ' ~ note.generatedAt }}</dd>{% endif %}
             {% for source in note.sources %}
@@ -32,8 +31,8 @@
         </dl>
     </twig:Panel>
 
-    <article class="mt-8 border-t-2 border-ink pt-5 leading-relaxed [&_a]:text-rust [&_a]:underline [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-bold [&_li]:ml-5 [&_li]:list-disc [&_p]:mb-3 [&_code]:font-mono [&_code]:text-sm">
+    <article class="md mt-8 border-t-2 border-ink pt-5">
         {{ html|raw }}
     </article>
-</main>
+</div></main>
 {% endblock %}

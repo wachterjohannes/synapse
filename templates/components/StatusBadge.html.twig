@@ -1,9 +1,9 @@
 {# The status of a note as a small label. Unknown values are shown as they are. #}
 {% props status %}
 {% set colors = {
-    draft: 'bg-amber-100 text-amber-900',
-    stable: 'bg-stone-200 text-stone-800',
-    verified: 'bg-emerald-100 text-emerald-900',
-    deprecated: 'bg-red-100 text-rust line-through',
+    draft: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
+    stable: 'bg-stone-200 text-stone-800 dark:bg-stone-800 dark:text-stone-200',
+    verified: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
+    deprecated: 'bg-rust-soft text-rust line-through',
 } %}
-<span {{ attributes.defaults({class: 'rounded px-2 py-0.5 text-xs font-bold uppercase tracking-wider ' ~ (colors[status] ?? 'bg-stone-100 text-muted')}) }}>{{ status ?: 'no status' }}</span>
+<span {{ attributes.defaults({class: 'rounded px-2 py-0.5 text-xs font-bold uppercase tracking-wider ' ~ (colors[status] ?? 'bg-line text-muted')}) }}>{{ status ?: 'no status' }}</span>

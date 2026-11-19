@@ -3,16 +3,22 @@
 namespace App\Tests\Security;
 
 use App\Security\UiGuard;
+use App\Tests\Support\Environment;
+use App\Tests\Support\TempDirectory;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Twig\Environment as Twig;
+use Twig\Loader\ArrayLoader;
 
 final class UiGuardTest extends TestCase
 {
+    use TempDirectory;
+
     private function guard(string $password = 'secret', int $limit = 2): UiGuard
     {
-        return new UiGuard($password, new RateLimiterFactory(['id' => 'ui_paid', 'policy' => 'sliding_window', 'limit' => $limit, 'interval' => '1 minute'], new InMemoryStorage()));
+        return new UiGuard($password, new RateLimiterFactory(['id' => 'ui_paid', 'policy' => 'sliding_window', 'limit' => $limit, 'interval' => '1 minute'], new InMemoryStorage()), Environment::doctor($this->root), new Twig(new ArrayLoader(['ui/setup.html.twig' => 'setup page with {{ checks|length }} checks'])));
     }
 
     public function testTheUiIsOffWhileThePasswordIsEmpty(): void
@@ -20,7 +26,7 @@ final class UiGuardTest extends TestCase
         $response = $this->guard('')->disabled();
 
         self::assertSame(503, $response?->getStatusCode());
-        self::assertStringContainsString('UI_PASSWORD', (string) $response?->getContent());
+        self::assertStringContainsString('setup page with 10 checks', (string) $response?->getContent());
     }
 
     public function testTheUiIsOnWithAPassword(): void
@@ -32,8 +38,10 @@ final class UiGuardTest extends TestCase
     {
         $request = new Request();
         $request->headers->set('Sec-Fetch-Site', 'same-origin');
+        $response = $this->guard('')->guard($request);
 
-        self::assertSame(503, $this->guard('')->guard($request)?->getStatusCode());
+        self::assertSame(503, $response?->getStatusCode());
+        self::assertStringContainsString('UI_PASSWORD', (string) $response?->getContent(), 'A request that is not a page gets the short text.');
     }
 
     public function testASameOriginRequestPasses(): void

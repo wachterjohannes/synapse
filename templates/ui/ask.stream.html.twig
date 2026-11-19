@@ -1,18 +1,29 @@
 {# A new answer card. The turbo-stream-source opens the event stream that fills it word by word. #}
 {# Without a source the card only shows why the question was not asked. #}
-{# "id" means something else inside the Terminal component, so the id of the card is kept under another name. #}
-{% set card = id %}
+{# "id" means something else inside a component, so every id of the card is built from the one set here. #}
+{% set card = 'answer-' ~ id %}
 <turbo-stream action="prepend" target="answers">
     <template>
-        <div id="answer-{{ id }}" data-controller="speak" data-speak-url-value="{{ path('ui_speak') }}">
-            <p class="mb-1 text-sm text-muted">{{ question }}</p>
+        <article id="{{ card }}" data-controller="speak copy" data-speak-url-value="{{ path('ui_speak') }}">
+            <p class="mb-2 font-serif text-lg font-bold leading-snug">{{ question }}</p>
             {% if problem %}
-                <twig:Terminal id="answer-{{ id }}-text" data-speak-target="text">{{ problem }}</twig:Terminal>
+                <twig:Output id="{{ card }}-text" class="flex gap-2 border-rust text-sm">
+                    <twig:ux:icon name="lucide:triangle-alert" class="mt-0.5 size-4 shrink-0 text-rust" />
+                    <span>{{ problem }}</span>
+                </twig:Output>
             {% else %}
-                <twig:Terminal id="answer-{{ id }}-text" data-speak-target="text"><span id="answer-{{ card }}-wait" class="animate-pulse text-slate-500">Thinking...</span></twig:Terminal>
-                <div id="answer-{{ id }}-actions" class="mt-2"></div>
-                <turbo-stream-source id="answer-{{ id }}-source" src="{{ path('ui_ask_stream', {id: id, q: question}) }}"></turbo-stream-source>
+                {# the live part takes the plain words, the card is then replaced by the same answer as HTML #}
+                <twig:Output id="{{ card }}-text">
+                    <div id="{{ card }}-wait" class="animate-pulse space-y-2 py-1" aria-label="Waiting for the answer">
+                        <div class="h-3 w-11/12 rounded bg-line"></div>
+                        <div class="h-3 w-4/5 rounded bg-line"></div>
+                        <div class="h-3 w-2/3 rounded bg-line"></div>
+                    </div>
+                    <div id="{{ card }}-live" class="whitespace-pre-wrap leading-relaxed"></div>
+                </twig:Output>
+                <div id="{{ card }}-actions" class="mt-2 flex flex-wrap items-center gap-2"></div>
+                <turbo-stream-source id="{{ card }}-source" src="{{ path('ui_ask_stream', {id: id, q: question}) }}"></turbo-stream-source>
             {% endif %}
-        </div>
+        </article>
     </template>
 </turbo-stream>
