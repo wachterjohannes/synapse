@@ -32,8 +32,8 @@ final class ToolGuard implements ReferenceHandlerInterface
         }
 
         $result = $this->inner->handle($reference, $arguments);
-        if ($reference instanceof ToolReference && \is_string($result) && str_starts_with($result, ToolError::PREFIX)) {
-            throw new ToolCallException(substr($result, \strlen(ToolError::PREFIX)));
+        if ($reference instanceof ToolReference && $result instanceof ToolError) {
+            throw new ToolCallException($result->reason);
         }
 
         return $result;

@@ -24,7 +24,7 @@ final class SaveToBrain
      * @param string       $body        the markdown body, starting with "# " and the title, in the shape of the type
      * @param list<string> $sources     full URLs the material came from, cited in the body as [^s1], [^s2]
      */
-    public function __invoke(string $path, string $type, string $title, string $description, array $tags, string $body, array $sources = []): string
+    public function __invoke(string $path, string $type, string $title, string $description, array $tags, string $body, array $sources = []): string|ToolError
     {
         try {
             return 'Saved '.$this->brain->saveToBrain($path, $type, $title, $description, $tags, $body, $sources);

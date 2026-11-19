@@ -19,7 +19,7 @@ final class SaveToInbox
      * @param string $slug short lowercase name with dashes, for example "mcp-auth-idea"
      * @param string $text the text of the note
      */
-    public function __invoke(string $slug, string $text): string
+    public function __invoke(string $slug, string $text): string|ToolError
     {
         try {
             return 'Saved '.$this->brain->saveToInbox($slug, $text);

@@ -6,11 +6,12 @@ framework:
     # A request for any other host is refused with 400 before a route sees it.
     trusted_hosts: ['%env(TRUSTED_HOSTS)%']
 
-    # A model with tools can take half a minute or more for one answer, and the default of 60 seconds without a
-    # byte is too tight for a trial key at a busy hour. The introspection call of the MCP endpoint sets a limit of its own.
+    # Seconds without a byte before a call gives up. An answer with tools takes 7 to 10 seconds on a good day and half a minute
+    # at a busy hour. A call that hangs does not come back, so a longer wait only delays the error message.
+    # The introspection call of the MCP endpoint sets a limit of its own.
     http_client:
         default_options:
-            timeout: 120
+            timeout: 60
 
     # Every question, capture, read-aloud and recording of the browser page is a paid call. This caps how fast they can come.
     rate_limiter:

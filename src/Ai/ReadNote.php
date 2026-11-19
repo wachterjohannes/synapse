@@ -18,7 +18,7 @@ final class ReadNote
     /**
      * @param string $path the path of the note, as shown by list_notes
      */
-    public function __invoke(string $path): string
+    public function __invoke(string $path): string|ToolError
     {
         try {
             return $this->brain->read($path);

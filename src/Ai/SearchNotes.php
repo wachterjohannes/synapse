@@ -22,10 +22,10 @@ final class SearchNotes
     /**
      * @param string $query what to look for, as a question or a few keywords
      */
-    public function __invoke(string $query): string
+    public function __invoke(string $query): string|ToolError
     {
         if (null !== $missing = $this->keys->missing()) {
-            return ToolError::PREFIX.$missing;
+            return new ToolError($missing);
         }
 
         $passages = [];
