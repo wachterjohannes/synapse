@@ -1,0 +1,14 @@
+# What goes where, and what it costs
+
+Read this before you point it at notes you care about.
+
+- **Notes leave your machine.** `ai:store:index` sends every note to the embedding model of the provider. Each question sends the passages it found, and `capture` sends the text you hand over. With `app:federate`, passages of the other brain go to Cohere for reranking. With voice, the answer text goes to ElevenLabs and the recording goes to ElevenLabs for transcription.
+- **It costs money.** Every question, capture, read-aloud and recording is a paid call. A trial key covers a demo. There is no rate limit. The page is for your own machine.
+- **A model can be slow.** An answer with tool calls took 25 to 35 seconds on a Cohere trial key at a busy hour, and a call can hang for good. The HTTP client waits 60 seconds without a byte (`config/packages/framework.yaml`) before it gives up with "Idle timeout". Run the command again if that happens.
+- **The page is a single-user tool.** HTTP basic auth with one password, and no roles. A request that writes or costs money has to come from the page itself (`Sec-Fetch-Site: same-origin`) or carry an `X-Synapse-Ui` header. Reading the notes needs only the password. `TRUSTED_HOSTS` in `.env` lets only `127.0.0.1`, `localhost` and `[::1]` through. The page sends no cookie, it sets a Content-Security-Policy with a nonce for its scripts, and it cannot be put in a frame.
+- **Input has a size, and calls have a rate.** A capture can have 8000 characters, a question 1000, a text to read aloud 4000, a recording 10 MB (the recorder stops after four minutes). The page refuses more before any model is called, and it lets through 20 calls per minute that cost money (`rate_limiter` in `config/packages/framework.yaml`). An event stream answers once. A browser that asks again for the same one gets a `204`.
+- **An empty key stops the command.** `app:ask`, `app:capture`, `app:federate` and `ai:store:index` say which key is missing and send nothing. The page says the same in the answer card.
+- **The agents write drafts.** Notes the agents write carry `status: draft`. They never replace a note. The `Vault` refuses every path outside `inbox/` and `brain/`, and every symlink. Keep `notes/` in Git, so every change is a diff you can review.
+- **The model can still be talked into things.** A note can contain text that talks to the model. A token check does not stop that, and neither does the `Vault`. It only limits what the model can do with the files.
+- **Tool errors.** A tool that cannot do what it was asked, like a path that is not allowed, answers over MCP with `isError: true` and the reason as text, so the agent behind the client can read it and try again. The agents of this repository get the same text from the tool directly.
+- **`APP_ENV=dev` is on.** An error in the browser shows a stack trace and paths. That is fine on your machine.
