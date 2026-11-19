@@ -39,4 +39,5 @@ services:
 
     App\Brain\QueryVectorizer:
         arguments:
-            $inner: '@ai.vectorizer.cohere'
+            $inner: '@ai.vectorizer.brain'
+            $queryOptions: '%query_options%'

@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<main class="mx-auto max-w-3xl px-6 pt-12 pb-20">
+    <div class="text-xs font-bold uppercase tracking-[0.2em] text-rust">Symfony AI · Synapse</div>
+    <h1 class="mt-1 mb-1 text-5xl font-bold">Your second brain</h1>
+    <p class="mb-8 text-neutral-700">Capture a thought, or ask the notes a question. The same agents as the commands, with a voice if you like.</p>
+
+    <twig:Panel title="Capture">
+        <form action="{{ path('ui_capture') }}" method="post" data-turbo-stream
+              data-controller="recorder" data-recorder-url-value="{{ path('ui_transcribe') }}">
+            <textarea name="text" required rows="3" data-recorder-target="text"
+                      placeholder="Rough idea, a decision, a link..."
+                      class="w-full rounded-md border border-stone-400 bg-[#fffdf8] p-3"></textarea>
+            <div class="my-3 flex flex-wrap items-center gap-3">
+                <button class="rounded-md bg-ink px-4 py-2 text-white disabled:opacity-50" data-turbo-submits-with="Filing...">File it</button>
+                <twig:Mic />
+                <span class="text-sm text-muted" data-recorder-target="status"></span>
+            </div>
+        </form>
+        <twig:Terminal id="capture-out" />
+    </twig:Panel>
+
+    <twig:Panel title="Ask" class="mt-8">
+        <form action="{{ path('ui_ask') }}" method="post" data-turbo-stream
+              data-controller="recorder" data-recorder-url-value="{{ path('ui_transcribe') }}">
+            <textarea name="question" required rows="2" data-recorder-target="text"
+                      placeholder="What did we decide about..."
+                      class="w-full rounded-md border border-stone-400 bg-[#fffdf8] p-3"></textarea>
+            <div class="my-3 flex flex-wrap items-center gap-3">
+                <button class="rounded-md bg-ink px-4 py-2 text-white disabled:opacity-50" data-turbo-submits-with="Asking...">Ask</button>
+                <twig:Mic />
+                <span class="text-sm text-muted" data-recorder-target="status"></span>
+            </div>
+        </form>
+        <div id="answers" class="space-y-4"></div>
+    </twig:Panel>
+</main>
+{% endblock %}

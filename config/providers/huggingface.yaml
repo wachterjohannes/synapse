@@ -1,0 +1,19 @@
+# Hugging Face Inference Providers. Needs HUGGINGFACE_API_KEY. The index lives in its own file because
+# the vectors have another size than the Cohere ones, run ai:store:setup brain and ai:store:index brain once.
+parameters:
+    default_db: '%kernel.project_dir%/var/brain-huggingface.sqlite'
+    # These embedding models make no difference between documents and queries.
+    query_options: []
+
+ai:
+    vectorizer:
+        brain:
+            platform: 'ai.platform.huggingface'
+            model: 'BAAI/bge-small-en-v1.5'
+    agent:
+        capturer:
+            platform: 'ai.platform.huggingface'
+            model: 'meta-llama/Llama-3.3-70B-Instruct'
+        reader:
+            platform: 'ai.platform.huggingface'
+            model: 'meta-llama/Llama-3.3-70B-Instruct'

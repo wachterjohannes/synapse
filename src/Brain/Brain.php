@@ -33,6 +33,66 @@ final class Brain
         return $this->vault->read($path);
     }
 
+    /**
+     * @return list<Note> every finished note below brain/, without the two reserved files
+     */
+    public function notes(): array
+    {
+        $notes = [];
+        foreach ($this->vault->list() as $path) {
+            if (str_starts_with($path, 'brain/') && !\in_array(basename($path), ['index.md', 'log.md'], true)) {
+                $notes[] = $this->note($path);
+            }
+        }
+
+        return $notes;
+    }
+
+    public function note(string $path): Note
+    {
+        return Note::parse($path, $this->vault->read($path));
+    }
+
+    /**
+     * Only a person calls this, from app:status or the browser. No tool of the agents or of the MCP server does,
+     * because "verified" has to mean that someone looked at the note. The change touches the status line and nothing else.
+     *
+     * @return string the status the note had before
+     */
+    public function setStatus(string $path, string $status): string
+    {
+        $this->validator->validateStatus($status);
+        if (!preg_match('#^brain/.+\.md\z#', $path) || \in_array(basename($path), ['index.md', 'log.md'], true)) {
+            throw new \InvalidArgumentException(sprintf('"%s" is not a finished note. Only notes in brain/ have a status.', $path));
+        }
+
+        $before = '';
+        $this->vault->update($path, static function (string $content) use ($status, $path, &$before): string {
+            if (!preg_match('/\A---\n.*?\n---\n/s', $content, $head)) {
+                throw new \InvalidArgumentException(sprintf('"%s" has no frontmatter.', $path));
+            }
+            $frontmatter = $head[0];
+            if (preg_match('/^status:[ \t]*(\S*)[ \t]*$/m', $frontmatter, $m)) {
+                $before = $m[1];
+                $changed = preg_replace('/^status:[^\n]*$/m', 'status: '.$status, $frontmatter, 1);
+            } else {
+                $changed = substr($frontmatter, 0, -4)."status: $status\n---\n";
+            }
+
+            return $changed.substr($content, \strlen($frontmatter));
+        });
+
+        if ($before !== $status) {
+            try {
+                $this->log($this->now()->format('Y-m-d'), sprintf('status of %s: %s to %s', $path, '' === $before ? 'none' : $before, $status));
+            } catch (\Throwable $e) {
+                error_log(sprintf('synapse: could not write log.md for %s: %s', $path, $e->getMessage()));
+            }
+        }
+
+        return $before;
+    }
+
     public function saveToInbox(string $slug, string $text): string
     {
         if (!preg_match('/^[a-z0-9][a-z0-9-]*\z/', $slug)) {

@@ -2,14 +2,27 @@ security:
     role_hierarchy:
         ROLE_BRAIN_WRITE: [ROLE_BRAIN_READ]
 
+    # The password of the browser UI is compared as it is, the UI is meant for your own machine.
+    password_hashers:
+        Symfony\Component\Security\Core\User\InMemoryUser: plaintext
+
     providers:
         brain_users:
             memory: ~
+        ui_users:
+            memory:
+                users:
+                    synapse: { password: '%env(UI_PASSWORD)%', roles: [ROLE_UI] }
 
     firewalls:
         dev:
             pattern: ^/(_profiler(/|$)|(_wdt|assets|build)/)
             security: false
+        ui:
+            pattern: ^/(ui/|$)
+            stateless: true
+            provider: ui_users
+            http_basic: { realm: Synapse }
         mcp:
             pattern: ^/mcp
             stateless: true
@@ -21,3 +34,4 @@ security:
 
     access_control:
         - { path: ^/mcp, roles: ROLE_BRAIN_READ }
+        - { path: ^/(ui/|$), roles: ROLE_UI }

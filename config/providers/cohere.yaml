@@ -1,0 +1,19 @@
+# The default provider. Embeddings and both agents run on Cohere.
+parameters:
+    default_db: '%kernel.project_dir%/var/brain-cohere.sqlite'
+    # Cohere embeds documents and queries differently, the retriever asks for the query side.
+    query_options:
+        input_type: !php/enum Symfony\AI\Platform\Bridge\Cohere\InputType::SearchQuery
+
+ai:
+    vectorizer:
+        brain:
+            platform: 'ai.platform.cohere'
+            model: 'embed-english-v3.0'
+    agent:
+        capturer:
+            platform: 'ai.platform.cohere'
+            model: 'command-a-03-2025'
+        reader:
+            platform: 'ai.platform.cohere'
+            model: 'command-a-03-2025'

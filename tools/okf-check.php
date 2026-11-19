@@ -89,6 +89,34 @@ unlink($root.'/brain/log.md');
 $brain->saveToBrain('topics/after-log.md', 'Topic', 'After log', 'The log is created when it is missing.', ['log'], "# After log\n");
 $expect('a missing log.md is created instead of failing', is_file($root.'/brain/topics/after-log.md') && str_contains((string) file_get_contents($root.'/brain/log.md'), 'added brain/topics/after-log.md'));
 
+// The status belongs to a person: setStatus changes the status line and nothing else, and logs it.
+$before = (string) file_get_contents($root.'/brain/decisions/use-hyphens.md');
+$expect('setStatus reports the old status', 'draft' === $brain->setStatus('brain/decisions/use-hyphens.md', 'verified'));
+$after = (string) file_get_contents($root.'/brain/decisions/use-hyphens.md');
+$expect('setStatus changes the status line and nothing else', $after === str_replace("status: draft\n", "status: verified\n", $before));
+$expect('setStatus writes a line to log.md', str_contains((string) file_get_contents($root.'/brain/log.md'), 'status of brain/decisions/use-hyphens.md: draft to verified'));
+$brain->setStatus('brain/decisions/use-hyphens.md', 'verified');
+$expect('the same status again is not logged twice', 1 === substr_count((string) file_get_contents($root.'/brain/log.md'), 'draft to verified') && 0 === substr_count((string) file_get_contents($root.'/brain/log.md'), 'verified to verified'));
+$expect('an unknown status is rejected', $rejects(fn () => $brain->setStatus('brain/decisions/use-hyphens.md', 'approved')));
+$expect('a status with a newline is rejected', $rejects(fn () => $brain->setStatus('brain/decisions/use-hyphens.md', "draft\nx: y")));
+$expect('log.md has no status', $rejects(fn () => $brain->setStatus('brain/log.md', 'stable')));
+$expect('an inbox note has no status', $rejects(fn () => $brain->setStatus('inbox/x.md', 'stable')));
+$expect('a note that does not exist is rejected', $rejects(fn () => $brain->setStatus('brain/topics/ghost.md', 'stable')));
+file_put_contents($root.'/brain/topics/plain.md', "# No frontmatter\n");
+$expect('a note without frontmatter is rejected and stays as it is', $rejects(fn () => $brain->setStatus('brain/topics/plain.md', 'stable')) && "# No frontmatter\n" === file_get_contents($root.'/brain/topics/plain.md'));
+file_put_contents($root.'/brain/topics/nostatus.md', "---\ntype: Topic\ntitle: \"X\"\n---\n\n# X\n");
+$brain->setStatus('brain/topics/nostatus.md', 'stable');
+$expect('a note without a status line gets one', "---\ntype: Topic\ntitle: \"X\"\nstatus: stable\n---\n\n# X\n" === file_get_contents($root.'/brain/topics/nostatus.md'));
+$note = $brain->note('brain/decisions/use-hyphens.md');
+$expect('a note is read back with its data', 'verified' === $note->status && 'Use hyphens' === $note->title && ['naming'] === $note->tags && 'synapse/1.0' === $note->generatedBy && 's1' === $note->sources[0]['id']);
+$expect('notes() lists finished notes without log.md', !\in_array('brain/log.md', array_map(static fn ($n) => $n->path, $brain->notes()), true) && \count($brain->notes()) >= 3);
+
+// No tool may reach setStatus, neither of the agents (src/Ai) nor of the MCP server (src/Mcp).
+foreach (array_merge(glob(__DIR__.'/../src/Ai/*.php'), glob(__DIR__.'/../src/Mcp/*.php')) as $toolFile) {
+    $expect(basename($toolFile).' does not touch the status', !preg_match('/setStatus|OkfValidator::STATUSES/', (string) file_get_contents($toolFile)));
+}
+$expect('the tools still write drafts', str_contains((string) file_get_contents(__DIR__.'/../src/Brain/Brain.php'), 'status: draft'));
+
 exec('rm -rf '.escapeshellarg($root));
 if ($fails) {
     fwrite(\STDERR, "OKF check failed: ".implode('; ', $fails)."\n");

@@ -12,6 +12,9 @@ final class OkfValidator
     /** OKF reserves these two names in every folder */
     private const RESERVED = ['index.md', 'log.md'];
 
+    /** The tools write draft. The other three can only be set by a person, through a command or the browser. */
+    public const STATUSES = ['draft', 'stable', 'verified', 'deprecated'];
+
     public function __construct(private readonly OkfFormat $format)
     {
     }
@@ -86,6 +89,13 @@ final class OkfValidator
 
         if ([] !== $errors) {
             throw new \InvalidArgumentException(implode(' ', $errors));
+        }
+    }
+
+    public function validateStatus(string $status): void
+    {
+        if (!\in_array($status, self::STATUSES, true)) {
+            throw new \InvalidArgumentException(sprintf('The status "%s" is unknown. Use one of: %s.', $status, implode(', ', self::STATUSES)));
         }
     }
 }

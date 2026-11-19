@@ -141,4 +141,54 @@ if php bin/console debug:router --raw 2>/dev/null | grep -q '/mcp'; then
         fi
     fi
 fi
+if [ -f config/providers/huggingface.yaml ]; then
+    check "SYNAPSE_PROVIDER=huggingface compiles" "SYNAPSE_PROVIDER=huggingface APP_CACHE_DIR=\$PWD/var/cache-hf php bin/console cache:clear"
+    check "an unknown SYNAPSE_PROVIDER is refused" "! SYNAPSE_PROVIDER=nope APP_CACHE_DIR=\$PWD/var/cache-nope php bin/console cache:clear"
+fi
+
+if [ -f src/Controller/UiController.php ]; then
+    check "the stylesheet builds" "php bin/console tailwind:build"
+    UI_PORT=${UI_PORT:-38601}; UI=http://127.0.0.1:$UI_PORT
+    # php -S needs workers here, because an answer streams while the page loads its assets
+    UI_PASSWORD=smoke-ui PHP_CLI_SERVER_WORKERS=4 APP_CACHE_DIR=$PWD/var/cache-ui serve ui $UI_PORT
+    sleep 2
+    check "the UI wants a password" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' $UI/)\" = 401 ]"
+    check "the UI opens with the password" "[ \"\$(curl -s -u synapse:smoke-ui $UI/ | grep -c 'Your second brain')\" = 1 ]"
+    check "the UI serves its stylesheet" "curl -s -u synapse:smoke-ui $UI/ | grep -o '/assets/styles/app-[^\"]*.css' | head -1 | xargs -I{} curl -sf -o /dev/null $UI{}"
+    check "a request from another site is refused" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/capture -H 'Sec-Fetch-Site: cross-site' -d text=x)\" = 403 ]"
+    check "a request without a sign of this page is refused" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/capture -d text=x)\" = 403 ]"
+    if grep -q "'ui_notes'" src/Controller/NotesController.php; then
+        printf -- '---\ntype: Topic\ntitle: "Smoke status"\ndescription: "A draft for the status checks."\ntags: [smoke]\nstatus: draft\ngenerated:\n  by: synapse/1.0\n  at: 2026-11-01T08:00:00Z\n---\n\n# Smoke status\n\nSee [RAG](/topics/rag-basics.md).\n' > notes/brain/topics/smoke-status.md
+        NOTE=brain/topics/smoke-status.md
+        check "the notes page needs the password" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' $UI/ui/notes)\" = 401 ]"
+        check "the notes page lists a note with its status" "curl -s -u synapse:smoke-ui '$UI/ui/notes?status=draft' | grep -q 'Smoke status'"
+        check "the status filter hides the other notes" "! curl -s -u synapse:smoke-ui '$UI/ui/notes?status=draft' | grep -q 'RAG basics'"
+        check "a note shows its text and links to the other note" "curl -s -u synapse:smoke-ui '$UI/ui/note?path=$NOTE' | grep -q 'ui/note?path=brain/topics/rag-basics.md'"
+        check "log.md is not shown as a note" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui '$UI/ui/note?path=brain/log.md')\" = 404 ]"
+        check "a status change from another site is refused" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/note/status -H 'Sec-Fetch-Site: cross-site' -d path=$NOTE -d status=verified)\" = 403 ]"
+        check "an unknown status is refused" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/note/status -H 'X-Synapse-Ui: 1' -d path=$NOTE -d status=approved)\" = 422 ]"
+        check "the file is still a draft after both" "grep -q '^status: draft' notes/$NOTE"
+        check "the browser changes the status and sends you back to the note" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/note/status -H 'X-Synapse-Ui: 1' -d path=$NOTE -d status=verified)\" = 303 ] && grep -q '^status: verified' notes/$NOTE"
+        check "app:status sets a status" "php bin/console app:status $NOTE stable </dev/null && grep -q '^status: stable' notes/$NOTE"
+        check "app:status --list finds it" "php bin/console app:status --list=stable </dev/null | grep -q smoke-status.md"
+        check "app:status refuses an unknown status" "! php bin/console app:status $NOTE approved </dev/null"
+        check "both changes are in log.md" "grep -q 'status of $NOTE: draft to verified' notes/brain/log.md && grep -q 'status of $NOTE: verified to stable' notes/brain/log.md"
+    fi
+    if [ $LIVE = 1 ]; then
+        for TRY in 1 2 3; do
+            curl -sN -m 120 -u synapse:smoke-ui -H 'X-Synapse-Ui: 1' "$UI/ui/ask/abcd1234/stream?q=What+breaks+when+I+upgrade+to+Symfony+AI+1.0+beta%3F" > var/smoke-stream.txt
+            grep -q 'action="remove" target="answer-abcd1234-source"' var/smoke-stream.txt && grep -q 'symfony-ai-1-0-beta1.md' var/smoke-stream.txt && break
+        done
+        check "the UI streams the answer word by word" "[ \"\$(grep -c 'action=\"append\"' var/smoke-stream.txt)\" -gt 5 ]"
+        # the words arrive in pieces, so the text is put back together before it is searched
+        check "the stream names the source" "grep 'action=\"append\"' var/smoke-stream.txt | sed 's/<[^>]*>//g; s/^data: //' | tr -d '\\n' | grep -q 'symfony-ai-1-0-beta1.md'"
+        check "the stream ends by closing its own source" "grep -q 'action=\"remove\" target=\"answer-abcd1234-source\"' var/smoke-stream.txt"
+        rm -f var/smoke-stream.txt
+        if [ -n "${ELEVENLABS_API_KEY:-}" ]; then
+            check "the UI reads an answer aloud" "[ \"\$(curl -s -o var/smoke-answer.mp3 -w '%{content_type}' -u synapse:smoke-ui -X POST $UI/ui/speak -H 'X-Synapse-Ui: 1' -H 'Content-Type: application/json' -d '{\"text\":\"Hello from the brain.\"}')\" = audio/mpeg ]"
+            check "the UI turns speech into text" "curl -s -u synapse:smoke-ui -H 'X-Synapse-Ui: 1' -F audio=@var/smoke-answer.mp3 $UI/ui/transcribe | grep -qi 'hello'"
+            rm -f var/smoke-answer.mp3
+        fi
+    fi
+fi
 exit $FAILED

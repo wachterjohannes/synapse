@@ -2,11 +2,12 @@ ai:
     platform:
         cohere:
             api_key: '%env(COHERE_API_KEY)%'
+        huggingface:
+            api_key: '%env(HUGGINGFACE_API_KEY)%'
+        elevenlabs:
+            api_key: '%env(ELEVENLABS_API_KEY)%'
 
-    vectorizer:
-        cohere:
-            platform: 'ai.platform.cohere'
-            model: 'embed-english-v3.0'
+    # The embedding model and the agent models depend on SYNAPSE_PROVIDER, see config/providers/.
 
     store:
         sqlite:
@@ -19,7 +20,7 @@ ai:
             source: '%env(default:default_notes:BRAIN_DIR)%/brain'
             transformers:
                 - 'Symfony\AI\Store\Document\Transformer\TextSplitTransformer'
-            vectorizer: 'ai.vectorizer.cohere'
+            vectorizer: 'ai.vectorizer.brain'
             store: 'ai.store.sqlite.brain'
 
     retriever:
@@ -29,8 +30,6 @@ ai:
 
     agent:
         capturer:
-            platform: 'ai.platform.cohere'
-            model: 'command-a-03-2025'
             max_tool_calls: 10
             prompt:
                 file: '%kernel.project_dir%/config/ai/capturer.md'
@@ -42,8 +41,6 @@ ai:
                 - 'App\Ai\SaveToBrain'
 
         reader:
-            platform: 'ai.platform.cohere'
-            model: 'command-a-03-2025'
             max_tool_calls: 6
             prompt:
                 file: '%kernel.project_dir%/config/ai/reader.md'

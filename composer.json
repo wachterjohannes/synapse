@@ -7,12 +7,17 @@
         "php": ">=8.4",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "league/commonmark": "^2.10",
         "nyholm/psr7": "^1.8",
         "symfony/ai-agent": "^1.0@beta",
         "symfony/ai-bundle": "^1.0@beta",
         "symfony/ai-cohere-platform": "^1.0@beta",
+        "symfony/ai-eleven-labs-platform": "^1.0@beta",
+        "symfony/ai-hugging-face-platform": "^1.0@beta",
         "symfony/ai-sqlite-store": "^1.0@beta",
         "symfony/ai-store": "^1.0@beta",
+        "symfony/asset": "8.1.*",
+        "symfony/asset-mapper": "8.1.*",
         "symfony/console": "8.1.*",
         "symfony/dotenv": "8.1.*",
         "symfony/filesystem": "8.1.*",
@@ -23,8 +28,13 @@
         "symfony/mcp-bundle": "^1.0@beta",
         "symfony/runtime": "8.1.*",
         "symfony/security-bundle": "8.1.*",
+        "symfony/stimulus-bundle": "^3.6",
         "symfony/string": "8.1.*",
-        "symfony/yaml": "8.1.*"
+        "symfony/twig-bundle": "8.1.*",
+        "symfony/ux-turbo": "^3.6",
+        "symfony/ux-twig-component": "^3.6",
+        "symfony/yaml": "8.1.*",
+        "symfonycasts/tailwind-bundle": "^1.0"
     },
     "config": {
         "allow-plugins": {
@@ -60,7 +70,9 @@
     "scripts": {
         "auto-scripts": {
             "cache:clear": "symfony-cmd",
-            "assets:install %PUBLIC_DIR%": "symfony-cmd"
+            "assets:install %PUBLIC_DIR%": "symfony-cmd",
+            "importmap:install": "symfony-cmd",
+            "tailwind:build": "symfony-cmd"
         },
         "post-install-cmd": [
             "@auto-scripts"

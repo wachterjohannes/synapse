@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* The same paper, rust and terminal colours as the headers of the articles. */
+@theme {
+    --color-paper: #f3eee4;
+    --color-ink: #1a1a1a;
+    --color-rust: #b5372a;
+    --color-muted: #8f8a80;
+    --color-terminal: #23262c;
+    --font-mono: ui-monospace, "DejaVu Sans Mono", monospace;
+}
