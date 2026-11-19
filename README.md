@@ -52,6 +52,14 @@ A note you capture, and a status you change, is indexed right away. If the index
 
 Symfony AI is at `1.0.0-BETA1`. The backwards compatibility promise starts with 1.0.0, so the code may need small changes when the final release ships.
 
+## What I ran into upstream
+
+Building this on Symfony AI 1.0.0-BETA1 and the PHP MCP SDK showed a few gaps. Each has an issue.
+
+- [symfony/ai#2968](https://github.com/symfony/ai/issues/2968): the MCP bundle does not register the reference handler as a service. `ToolGuardPass` in this repository exists because of that. It wraps every tool call and closes a tool to readers unless it says `readOnlyHint: true`.
+- [symfony/ai#2853](https://github.com/symfony/ai/issues/2853): the session store and the notification bus of the bundle are built on PSR-16 only.
+- [symfony/ai#2846](https://github.com/symfony/ai/issues/2846), fixed in [#2848](https://github.com/symfony/ai/pull/2848): a tool without arguments is sent without `parameters`, and the Hugging Face router answers 422. `list_notes` has an optional `folder` argument until the fix is released.
+
 ## License
 
 MIT, see `LICENSE`.
