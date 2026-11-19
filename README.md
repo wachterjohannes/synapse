@@ -39,7 +39,7 @@ php bin/console app:capture "Decision: we use SQLite for the vector store, becau
 php bin/console app:status               # every note with its status
 ```
 
-A captured note is not searchable until you index again, see [Providers](docs/providers.md).
+A note you capture, and a status you change, is indexed right away. If the index gets out of step, see [Providers](docs/providers.md).
 
 ## More
 

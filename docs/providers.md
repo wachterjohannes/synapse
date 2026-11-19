@@ -23,4 +23,6 @@ Without the key the page works and the two buttons answer with a message that na
 
 ## Change the notes, then index again
 
-The index is not updated when a note is written. Run `php bin/console ai:store:clear brain --force` before `php bin/console ai:store:index brain`. Indexing twice stores every passage twice.
+A new note in `brain/` and a changed status rebuild the index on their own (`App\Brain\Reindexer`). That is the same as the two commands below, so every note is embedded again. It takes a few seconds and costs one embedding call per batch of notes. A failure is logged to `var/log/` and the note stays written. Searching while the index is rebuilt can come back empty.
+
+A note you edit by hand, or one that you copy into `notes/brain/`, is not seen. For those run the commands yourself. Run `php bin/console ai:store:clear brain --force` before `php bin/console ai:store:index brain`. Indexing twice stores every passage twice.

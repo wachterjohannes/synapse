@@ -17,6 +17,7 @@ final class Brain
         private readonly Vault $vault,
         private readonly ClockInterface $clock,
         private readonly OkfValidator $validator,
+        private readonly ?Reindexer $reindexer = null,
     ) {
     }
 
@@ -94,6 +95,7 @@ final class Brain
             } catch (\Throwable $e) {
                 error_log(sprintf('synapse: could not write log.md for %s: %s', $path, $e->getMessage()));
             }
+            $this->reindexer?->refresh();
         }
 
         return $before;
@@ -144,6 +146,7 @@ final class Brain
         } catch (\Throwable $e) {
             error_log(sprintf('synapse: could not write log.md for %s: %s', $path, $e->getMessage()));
         }
+        $this->reindexer?->refresh();
 
         return $path;
     }

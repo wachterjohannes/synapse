@@ -34,6 +34,10 @@ if [ -e var/smoke-notes ]; then
 fi
 cp -a notes var/smoke-notes || { echo "could not back up notes/" >&2; exit 1; }
 PIDS=""
+# The notes are changed during the run and a change rebuilds the index, so the run works on an index of its own.
+SMOKE_DB=$PWD/var/smoke-brain.sqlite
+rm -f "$SMOKE_DB"
+export BRAIN_DB=$SMOKE_DB
 # stream ids and rate limit state live in the cache of a server: a run must not inherit them from the one before
 rm -rf var/cache-ui var/cache-down var/share-ui var/share-down
 cleanup() {
@@ -43,6 +47,7 @@ cleanup() {
         kill "$PID" 2>/dev/null
     done
     rm -rf notes && mv var/smoke-notes notes
+    rm -f "$SMOKE_DB"
 }
 trap cleanup EXIT
 
@@ -165,7 +170,7 @@ if php bin/console debug:router --raw 2>/dev/null | grep -q '/mcp'; then
             php bin/console ai:store:setup brain </dev/null >/dev/null 2>&1
             php bin/console ai:store:index brain </dev/null >/dev/null 2>&1
             OAUTH_AUDIENCE=$FRIEND APP_CACHE_DIR=$PWD/var/cache-friend serve friend $FRIEND_PORT
-            unset BRAIN_DIR BRAIN_DB
+            unset BRAIN_DIR; export BRAIN_DB=$SMOKE_DB
             sleep 2
             OUT=$(FRIEND_BRAIN_URL=$FRIEND FRIEND_BRAIN_TOKEN=$(token reader $FRIEND) php bin/console app:federate "How do I protect an MCP server?" </dev/null 2>&1)
             check "app:federate ranks passages of both brains" "echo \"\$OUT\" | grep -q 'friend:' && echo \"\$OUT\" | grep -q 'mine:'"
