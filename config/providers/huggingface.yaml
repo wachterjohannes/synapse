@@ -1,7 +1,7 @@
 # Hugging Face Inference Providers. Needs HUGGINGFACE_API_KEY. The index lives in its own file because
 # the vectors have another size than the Cohere ones, run ai:store:setup brain and ai:store:index brain once.
 parameters:
-    # The reader runs on novita: BETA1 fails on a streamed tool call from some providers (a chunk without function.name, symfony/ai).
+    # The reader runs on novita: BETA1 can fail on a streamed tool call when a provider sends the name late (symfony/ai#3007).
     # Set this to false to get the answer in one piece when you pick another model or provider.
     stream_answers: true
     default_db: '%kernel.project_dir%/var/brain-huggingface.sqlite'

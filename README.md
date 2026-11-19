@@ -62,6 +62,7 @@ Building this on Symfony AI 1.0.0-BETA1 and the PHP MCP SDK showed a few gaps. E
 - [symfony/ai#2968](https://github.com/symfony/ai/issues/2968): the MCP bundle does not register the reference handler as a service. `ToolGuardPass` in this repository exists because of that. It wraps every tool call and closes a tool to readers unless it says `readOnlyHint: true`.
 - [symfony/ai#2853](https://github.com/symfony/ai/issues/2853): the session store and the notification bus of the bundle are built on PSR-16 only.
 - [symfony/ai#2846](https://github.com/symfony/ai/issues/2846), fixed in [#2848](https://github.com/symfony/ai/pull/2848): a tool without arguments is sent without `parameters`, and the Hugging Face router answers 422. `list_notes` has an optional `folder` argument until the fix is released.
+- [symfony/ai#3007](https://github.com/symfony/ai/issues/3007), with [#3008](https://github.com/symfony/ai/pull/3008): a streamed tool call can fail with "Undefined array key name" when a provider sends the name after the id. I saw it once on the Hugging Face router and cannot reproduce it every time. The reader runs on `Qwen/Qwen3.8-27B:novita` and `stream_answers` can turn streaming off.
 
 ## License
 

@@ -8,7 +8,7 @@ I ran indexing, questions and capturing on Hugging Face. The default model is `o
 
 `list_notes` takes an optional `folder` argument for a reason: Symfony AI 1.0.0-BETA1 sends a tool without arguments without a `parameters` field, and the Hugging Face router refuses that with a 422 (symfony/ai#2846, fixed in #2848 after BETA1).
 
-The reader answers on `Qwen/Qwen3.8-27B:novita` and streams word by word. The suffix picks the provider behind the router. Symfony AI 1.0.0-BETA1 fails with "Undefined array key name" when some providers stream a tool call, for example `openai/gpt-oss-120b` on its default route. If you change the reader, check that streaming still works, or set `stream_answers: false` in `config/providers/huggingface.yaml`. The page then shows the answer in one piece. The capturer stays on `openai/gpt-oss-120b`, because it does not stream and files notes more reliably than Qwen.
+The reader answers on `Qwen/Qwen3.8-27B:novita` and streams word by word. The suffix picks the provider behind the router. Symfony AI 1.0.0-BETA1 can fail with "Undefined array key name" when a provider sends the name of a streamed tool call in a later chunk ([symfony/ai#3007](https://github.com/symfony/ai/issues/3007)). I saw it once with `openai/gpt-oss-120b` on its default route and cannot reproduce it every time. If you change the reader, check that streaming still works, or set `stream_answers: false` in `config/providers/huggingface.yaml`. The page then shows the answer in one piece. The capturer stays on `openai/gpt-oss-120b`, because it does not stream and files notes more reliably than Qwen.
 
 ## Voice
 
