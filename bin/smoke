@@ -8,7 +8,9 @@ cd "$(dirname "$0")/.."
 FAILED=0
 ok()    { echo "  ok    $1"; }
 fail()  { echo "  FAIL  $1"; FAILED=1; }
-check() { if eval "$2" >/dev/null 2>&1; then ok "$1"; else fail "$1"; fi; }
+# A check runs without pipefail: grep -q stops at the first match, the command before it gets SIGPIPE, and pipefail
+# would turn that into a failure on a machine that is slow enough.
+check() { if (set +o pipefail; eval "$2") >/dev/null 2>&1; then ok "$1"; else fail "$1"; fi; }
 # An answer comes from a model over the network. A request stalls now and then, and a model words things
 # differently each time. live runs a command up to three times, until its output matches the pattern.
 # The output of the last try stays in OUT.
