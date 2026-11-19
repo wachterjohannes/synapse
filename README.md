@@ -33,6 +33,12 @@ Open http://127.0.0.1:8080 and sign in as `synapse` with your `UI_PASSWORD`. Whi
 
 On the command line:
 
+```bash
+php bin/console app:ask "What breaks when I upgrade to Symfony AI 1.0 beta?"
+php bin/console app:capture "Decision: we use SQLite for the vector store, because it needs no service."
+php bin/console app:status               # every note with its status
+```
+
 A captured note is not searchable until you index again, see [Providers](docs/providers.md).
 
 ## More
