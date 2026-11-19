@@ -15,6 +15,7 @@ final class SearchNotes
     public function __construct(
         #[Target('brain')]
         private readonly RetrieverInterface $retriever,
+        private readonly ProviderKey $keys,
     ) {
     }
 
@@ -23,6 +24,10 @@ final class SearchNotes
      */
     public function __invoke(string $query): string
     {
+        if (null !== $missing = $this->keys->missing()) {
+            return ToolError::PREFIX.$missing;
+        }
+
         $passages = [];
         foreach ($this->retriever->retrieve($query, ['maxItems' => 4]) as $document) {
             $metadata = $document->getMetadata();

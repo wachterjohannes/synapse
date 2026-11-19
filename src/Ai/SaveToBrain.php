@@ -29,7 +29,7 @@ final class SaveToBrain
         try {
             return 'Saved '.$this->brain->saveToBrain($path, $type, $title, $description, $tags, $body, $sources);
         } catch (\InvalidArgumentException $e) {
-            return 'Error: '.$e->getMessage();
+            return ToolError::of($e);
         }
     }
 }

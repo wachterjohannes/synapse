@@ -24,7 +24,7 @@ final class SaveToInbox
         try {
             return 'Saved '.$this->brain->saveToInbox($slug, $text);
         } catch (\InvalidArgumentException $e) {
-            return 'Error: '.$e->getMessage();
+            return ToolError::of($e);
         }
     }
 }

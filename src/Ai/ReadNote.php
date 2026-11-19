@@ -23,7 +23,7 @@ final class ReadNote
         try {
             return $this->brain->read($path);
         } catch (\InvalidArgumentException $e) {
-            return 'Error: '.$e->getMessage();
+            return ToolError::of($e);
         }
     }
 }

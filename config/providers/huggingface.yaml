@@ -13,7 +13,7 @@ ai:
     agent:
         capturer:
             platform: 'ai.platform.huggingface'
-            model: 'meta-llama/Llama-3.3-70B-Instruct'
+            model: 'openai/gpt-oss-120b'
         reader:
             platform: 'ai.platform.huggingface'
-            model: 'meta-llama/Llama-3.3-70B-Instruct'
+            model: 'openai/gpt-oss-120b'

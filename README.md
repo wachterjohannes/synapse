@@ -18,7 +18,7 @@ The code is also the base of a [tutorial series](https://github.com/wachterjohan
 You need PHP 8.4 or newer and Composer. You also need one key: a `COHERE_API_KEY` ([dashboard.cohere.com](https://dashboard.cohere.com/api-keys), a trial key is enough) or a `HUGGINGFACE_API_KEY`. Voice needs an `ELEVENLABS_API_KEY` and is optional.
 
 ```bash
-git clone <this repository> synapse
+git clone https://github.com/wachterjohannes/synapse synapse
 cd synapse
 composer install
 printf 'COHERE_API_KEY=...\nUI_PASSWORD=pick-something\n' > .env.local
@@ -45,7 +45,7 @@ A captured note is not searchable until you index again, see below.
 
 Put `HUGGINGFACE_API_KEY=...` and `SYNAPSE_PROVIDER=huggingface` into `.env.local`. Every provider has its own container and its own index file (`var/brain-<provider>.sqlite`), so run `ai:store:setup brain` and `ai:store:index brain` once after a switch. The model names are in `config/providers/`. Federation still reranks with Cohere.
 
-I ran indexing and questions on Hugging Face with the default models, and they answer from the notes and name the source. Capturing works for rough thoughts. For a finished note `meta-llama/Llama-3.3-70B-Instruct` is less reliable than Cohere's `command-a`: in my runs it sometimes printed a tool call as text or filed the example from `describe_format` instead of your text. The validator keeps such a note out of `brain/` only when it breaks a rule, so look at what the capture agent wrote. Use Cohere to capture and either provider to ask.
+I ran indexing, questions and capturing on Hugging Face. The default model is `openai/gpt-oss-120b`, which calls tools reliably. The first default, `meta-llama/Llama-3.3-70B-Instruct`, sometimes printed a tool call as text or filed the example from `describe_format` instead of your text. The validator keeps a note out of `brain/` only when it breaks a rule, so look at what the capture agent wrote.
 
 `list_notes` takes an optional `folder` argument for a reason: Symfony AI 1.0.0-BETA1 sends a tool without arguments without a `parameters` field, and the Hugging Face router refuses that with a 422 (symfony/ai#2846, fixed in #2848 after BETA1).
 
@@ -111,7 +111,7 @@ Two things work differently from the fake server:
 - **Keycloak ignores the `resource` parameter (RFC 8707).** The audience comes from the client scope `brain-audience`, which adds `http://127.0.0.1:8080/mcp` to every token that has the scope. Another address needs another scope. Change the address in the realm file if your brain runs elsewhere. A second brain needs its own scope that a client asks for with `scope=`.
 - **Introspection answers `active: false` for a token that does not name the calling client in `aud`.** The same scope adds a second audience, `brain-server`. The brain only checks that its own address is among the values.
 
-The MCP specification wants an MCP client to find the authorization server by itself. With this realm that works as far as I tested it without a browser: the metadata names Keycloak, Keycloak publishes the authorization server metadata with PKCE and a registration endpoint, and a client registered on the fly got a token that the brain accepted. I did not try a real client such as the MCP Inspector.
+The MCP specification wants an MCP client to find the authorization server by itself. With this realm that works as far as I tested it without a browser: the metadata names Keycloak, Keycloak publishes the authorization server metadata with PKCE and a registration endpoint, and a client registered on the fly got a token that the brain accepted. Claude Code as a client lists the tools, searches, reads, is refused as a reader and shows "Needs authentication" for the address without a token. It worked with a token from the fake server and with one from Keycloak. I did not click through the browser login of a client, and I did not try the MCP Inspector.
 
 ### Ask a second brain
 
@@ -140,7 +140,7 @@ Read this before you point it at notes you care about.
 - **An empty key stops the command.** `app:ask`, `app:capture`, `app:federate` and `ai:store:index` say which key is missing and send nothing. The page says the same in the answer card.
 - **The agents write drafts.** Notes the agents write carry `status: draft`. They never replace a note. The `Vault` refuses every path outside `inbox/` and `brain/`, and every symlink. Keep `notes/` in Git, so every change is a diff you can review.
 - **The model can still be talked into things.** A note can contain text that talks to the model. A token check does not stop that, and neither does the `Vault`. It only limits what the model can do with the files.
-- **Tool errors are text.** A tool that cannot do what it was asked, like a path that is not allowed, answers with a message and not with an MCP error (`isError` stays `false`). That is on purpose. It lets the agent read what was wrong and try again. An MCP client has to look at the text.
+- **Tool errors.** A tool that cannot do what it was asked, like a path that is not allowed, answers over MCP with `isError: true` and the reason as text, so the agent behind the client can read it and try again. The agents of this repository get the same text from the tool directly.
 - **`APP_ENV=dev` is on.** An error in the browser shows a stack trace and paths. That is fine on your machine.
 
 ## What is in here
