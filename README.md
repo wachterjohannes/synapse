@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/img/logo.png" alt="Synapse logo" width="120"></p>
+
 # Synapse: a second brain with Symfony AI
 
 Synapse is a folder of markdown notes that agents write to and read from, that other tools reach over MCP, and that can ask a second brain for help. It runs on Symfony AI 1.0.0-BETA1 and the PHP MCP SDK. I built it for the Symfony AI & MCP hackathon.
@@ -11,7 +13,7 @@ What you can do with it:
 - **Federate.** `app:federate` asks a second brain over MCP and ranks both answers together with a reranker.
 - **Providers.** Cohere and Hugging Face, switched with one variable.
 
-The code is also the base of a [tutorial series](https://github.com/wachterjohannes/synapse-tutorial), one branch per step. This repository is the finished state.
+The code is also the base of a [tutorial series](https://johanneswachter.dev/synapse/) of six parts. Each part is one branch of the [tutorial repository](https://github.com/wachterjohannes/synapse-tutorial). This repository is the finished state.
 
 ## Run it in five minutes
 
