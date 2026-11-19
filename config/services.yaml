@@ -1,4 +1,6 @@
 parameters:
+    default_notes: '%kernel.project_dir%/notes'
+    default_db: '%kernel.project_dir%/var/brain.sqlite'
 
 services:
     _defaults:
@@ -10,7 +12,7 @@ services:
 
     App\Brain\Vault:
         arguments:
-            $root: '%kernel.project_dir%/notes'
+            $root: '%env(default:default_notes:BRAIN_DIR)%'
 
     Symfony\AI\Store\Document\Transformer\TextSplitTransformer: ~
 
@@ -20,6 +22,20 @@ services:
             $clientId: '%env(OAUTH_RESOURCE_CLIENT_ID)%'
             $clientSecret: '%env(OAUTH_RESOURCE_CLIENT_SECRET)%'
             $audience: '%env(OAUTH_AUDIENCE)%'
+
+    # The MCP client logs every failed request at error level and, without Monolog,
+    # the default logger prints that to stderr. Federation reports a down friend
+    # itself, so the console stays quiet. Critical messages (a crashing request) still show.
+    logger:
+        class: Symfony\Component\HttpKernel\Log\Logger
+        arguments: ['critical']
+
+    Symfony\AI\Store\Reranker\Reranker:
+        arguments:
+            $platform: '@ai.platform.cohere'
+            $model: 'rerank-v3.5'
+
+    Symfony\AI\Store\Reranker\RerankerInterface: '@Symfony\AI\Store\Reranker\Reranker'
 
     App\Brain\QueryVectorizer:
         arguments:

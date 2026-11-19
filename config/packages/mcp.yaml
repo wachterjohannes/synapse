@@ -15,3 +15,13 @@ mcp:
             # Enable STDIO for clients such as Claude Desktop via bin/console mcp:server.
             # transports:
             #     stdio: true
+
+    # The other brain this one can ask, see app:federate. The token comes from the other brain's authorization server.
+    clients:
+        brain:
+            servers:
+                friend:
+                    transport: http
+                    url: '%env(FRIEND_BRAIN_URL)%'
+                    headers:
+                        Authorization: 'Bearer %env(FRIEND_BRAIN_TOKEN)%'

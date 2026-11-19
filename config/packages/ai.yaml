@@ -11,12 +11,12 @@ ai:
     store:
         sqlite:
             brain:
-                dsn: 'sqlite:%kernel.project_dir%/var/brain.sqlite'
+                dsn: 'sqlite:%env(default:default_db:BRAIN_DB)%'
 
     indexer:
         brain:
             loader: 'App\Brain\NoteLoader'
-            source: '%kernel.project_dir%/notes/brain'
+            source: '%env(default:default_notes:BRAIN_DIR)%/brain'
             transformers:
                 - 'Symfony\AI\Store\Document\Transformer\TextSplitTransformer'
             vectorizer: 'ai.vectorizer.cohere'
