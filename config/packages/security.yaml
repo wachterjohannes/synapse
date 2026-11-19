@@ -19,10 +19,22 @@ security:
             pattern: ^/(_profiler(/|$)|(_wdt|assets|build)/)
             security: false
         ui:
-            pattern: ^/(ui/|$)
-            stateless: true
+            pattern: ^/(ui/|login$|logout$|$)
             provider: ui_users
+            # A browser gets the login page. Scripts and curl can still send HTTP basic auth.
+            entry_point: form_login
+            form_login:
+                login_path: ui_login
+                check_path: ui_login
+                enable_csrf: true
+                default_target_path: ui_index
             http_basic: { realm: Synapse }
+            login_throttling:
+                max_attempts: 5
+                interval: '1 minute'
+            logout:
+                path: ui_logout
+                target: ui_login
         mcp:
             pattern: ^/mcp
             stateless: true
@@ -35,4 +47,5 @@ security:
 
     access_control:
         - { path: ^/mcp, roles: ROLE_BRAIN_READ }
+        - { path: ^/login$, roles: PUBLIC_ACCESS }
         - { path: ^/(ui/|$), roles: ROLE_UI }

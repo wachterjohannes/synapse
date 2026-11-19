@@ -10,10 +10,13 @@
     {{ importmap('app', {nonce: csp_nonce()}) }}
 </head>
 <body class="bg-paper font-sans text-ink antialiased">
+{% if app.user %}
 <nav class="mx-auto flex max-w-3xl gap-6 px-6 pt-6 text-sm font-bold uppercase tracking-widest">
     <a href="{{ path('ui_index') }}" class="hover:text-rust">Brain</a>
     <a href="{{ path('ui_notes') }}" class="hover:text-rust">Notes</a>
+    <a href="{{ logout_path() }}" class="ml-auto font-normal normal-case tracking-normal text-muted hover:text-rust">Sign out</a>
 </nav>
+{% endif %}
 {% block body %}{% endblock %}
 </body>
 </html>

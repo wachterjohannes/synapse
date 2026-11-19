@@ -190,7 +190,15 @@ if [ -f src/Controller/UiController.php ]; then
     # php -S needs workers here, because an answer streams while the page loads its assets
     UI_PASSWORD=smoke-ui PHP_CLI_SERVER_WORKERS=4 APP_CACHE_DIR=$PWD/var/cache-ui APP_SHARE_DIR=$PWD/var/share-ui serve ui $UI_PORT
     sleep 2
-    check "the UI wants a password" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' $UI/)\" = 401 ]"
+    check "the UI sends a visitor to the login page" "[ \"\$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' $UI/)\" = '302 $UI/login' ]"
+    JAR=var/smoke-cookies.txt; rm -f $JAR
+    csrf() { curl -s -c $JAR -b $JAR $UI/login | grep -o 'name="_csrf_token" value="[^"]*"' | sed 's/.*value="//; s/"//'; }
+    check "a wrong password is sent back to the login page" "[ \"\$(curl -s -c $JAR -b $JAR -o /dev/null -w '%{http_code} %{redirect_url}' $UI/login -d _username=synapse -d _password=wrong --data-urlencode _csrf_token=\$(csrf))\" = '302 $UI/login' ]"
+    check "a login without the form token is refused" "[ \"\$(curl -s -o /dev/null -w '%{redirect_url}' $UI/login -d _username=synapse -d _password=smoke-ui)\" = '$UI/login' ]"
+    check "the right password opens the page with a session" "[ \"\$(curl -s -c $JAR -b $JAR -o /dev/null -w '%{http_code}' $UI/login -d _username=synapse -d _password=smoke-ui --data-urlencode _csrf_token=\$(csrf))\" = 302 ] && curl -s -b $JAR $UI/ | grep -q 'Your second brain'"
+    check "a session still needs the sign of this page to write" "[ \"\$(curl -s -b $JAR -o /dev/null -w '%{http_code}' -X POST $UI/ui/capture -d text=x)\" = 403 ] && curl -s -b $JAR -X POST $UI/ui/capture -H 'Sec-Fetch-Site: same-origin' -d text= | grep -q 'Write something first'"
+    check "signing out ends the session" "curl -s -b $JAR -c $JAR -o /dev/null \"$UI\$(curl -s -b $JAR $UI/ | grep -o 'href=\"/logout[^\"]*\"' | sed 's/href=\"//; s/\"//; s/&amp;/\\&/g')\" && [ \"\$(curl -s -b $JAR -o /dev/null -w '%{http_code}' $UI/)\" = 302 ]"
+    rm -f $JAR
     check "a request for another host name is refused" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -H 'Host: evil.example:$UI_PORT' $UI/)\" = 400 ]"
     check "the UI opens with the password" "[ \"\$(curl -s -u synapse:smoke-ui $UI/ | grep -c 'Your second brain')\" = 1 ]"
     check "the UI serves its stylesheet" "curl -s -u synapse:smoke-ui $UI/ | grep -o '/assets/styles/app-[^\"]*.css' | head -1 | xargs -I{} curl -sf -o /dev/null $UI{}"
@@ -218,7 +226,7 @@ if [ -f src/Controller/UiController.php ]; then
     if grep -q "'ui_notes'" src/Controller/NotesController.php; then
         printf -- '---\ntype: Topic\ntitle: "Smoke status"\ndescription: "A draft for the status checks."\ntags: [smoke]\nstatus: draft\ngenerated:\n  by: synapse/1.0\n  at: 2026-11-01T08:00:00Z\n---\n\n# Smoke status\n\nSee [RAG](/topics/rag-basics.md).\n' > notes/brain/topics/smoke-status.md
         NOTE=brain/topics/smoke-status.md
-        check "the notes page needs the password" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' $UI/ui/notes)\" = 401 ]"
+        check "the notes page needs the password" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' $UI/ui/notes)\" = 302 ] && [ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui $UI/ui/notes)\" = 200 ]"
         check "the notes page lists a note with its status" "curl -s -u synapse:smoke-ui '$UI/ui/notes?status=draft' | grep -q 'Smoke status'"
         check "the status filter hides the other notes" "! curl -s -u synapse:smoke-ui '$UI/ui/notes?status=draft' | grep -q 'RAG basics'"
         check "a note shows its text and links to the other note" "curl -s -u synapse:smoke-ui '$UI/ui/note?path=$NOTE' | grep -q 'ui/note?path=brain/topics/rag-basics.md'"

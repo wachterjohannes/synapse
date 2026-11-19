@@ -42,6 +42,6 @@ final class UiHeaders
 
     private function isPage(string $path): bool
     {
-        return '/' === $path || str_starts_with($path, '/ui/');
+        return \in_array($path, ['/', '/login', '/logout'], true) || str_starts_with($path, '/ui/');
     }
 }

@@ -27,7 +27,7 @@ php bin/console ai:store:index brain
 PHP_CLI_SERVER_WORKERS=4 php -d variables_order=EGPCS -S 127.0.0.1:8080 -t public public/index.php
 ```
 
-Open http://127.0.0.1:8080 and sign in as `synapse` with your `UI_PASSWORD`. While `UI_PASSWORD` is empty the page stays closed and every request gets a `401`. The workers are there because an answer streams while the page loads its files.
+Open http://127.0.0.1:8080 and sign in as `synapse` with your `UI_PASSWORD` on the login page. While `UI_PASSWORD` is empty the page stays closed. The workers are there because an answer streams while the page loads its files.
 
 `ai:store:setup` and `ai:store:index` build the search index in `var/`. The repository ships a handful of example notes in `notes/brain/`, so there is something to ask right away, for example "What breaks when I upgrade to Symfony AI 1.0 beta?". `composer install` also builds the stylesheet. You need no Node.
 
