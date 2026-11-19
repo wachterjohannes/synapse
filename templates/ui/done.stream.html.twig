@@ -3,3 +3,4 @@
     <template><button type="button" data-action="speak#play" class="rounded-md border border-ink px-3 py-1 text-sm">Read it aloud</button><audio controls hidden data-speak-target="audio" class="mt-2 w-full"></audio></template>
 </turbo-stream>
 <turbo-stream action="remove" target="answer-{{ id }}-source"></turbo-stream>
+<turbo-stream action="remove" target="answer-{{ id }}-wait"></turbo-stream>

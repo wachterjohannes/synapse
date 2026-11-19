@@ -31,9 +31,13 @@ final class IntrospectionTokenHandler implements AccessTokenHandlerInterface
             $claims = $this->httpClient->request('POST', $this->introspectionUrl, [
                 'auth_basic' => [$this->clientId, $this->clientSecret],
                 'body' => ['token' => $accessToken],
+                // every request waits for this answer, so it gets a short limit of its own
+                'timeout' => 5,
             ])->toArray();
-        } catch (\Throwable) {
-            throw new BadCredentialsException('The authorization server could not check the token.');
+        } catch (\Throwable $e) {
+            // Refused all the same: a token that cannot be checked does not get in. The client hears "try again later"
+            // and not "invalid token", because nothing is known about the token.
+            throw new AuthorizationServerUnavailable('The authorization server could not check the token.', 0, $e);
         }
 
         if (true !== ($claims['active'] ?? false)) {

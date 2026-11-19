@@ -3,6 +3,7 @@
 require __DIR__.'/../vendor/autoload.php';
 
 use App\Brain\Brain;
+use App\Brain\Note;
 use App\Brain\OkfFormat;
 use App\Brain\OkfValidator;
 use App\Brain\Vault;
@@ -110,6 +111,23 @@ $expect('a note without a status line gets one', "---\ntype: Topic\ntitle: \"X\"
 $note = $brain->note('brain/decisions/use-hyphens.md');
 $expect('a note is read back with its data', 'verified' === $note->status && 'Use hyphens' === $note->title && ['naming'] === $note->tags && 'synapse/1.0' === $note->generatedBy && 's1' === $note->sources[0]['id']);
 $expect('notes() lists finished notes without log.md', !\in_array('brain/log.md', array_map(static fn ($n) => $n->path, $brain->notes()), true) && \count($brain->notes()) >= 3);
+
+// A hand-edited note can hold anything under "sources" and "tags". The page must never have to print a list or a map.
+$weird = Note::parse('brain/topics/weird.md', "---\ntype: Topic\ntitle: \"W\"\ntags: [a, [b], {c: d}, ~, ok]\nsources:\n  - id: [x]\n    resource: [y]\n  - id: s2\n    resource: https://example.com\n  - just text\n---\n\n# W\n");
+$expect('a note keeps only plain tags', ['a', 'ok'] === $weird->tags);
+$expect('a note keeps only sources with an id and a resource as plain values', [['id' => 's2', 'resource' => 'https://example.com']] === $weird->sources);
+
+// A note is text. A file of a few megabytes is not read into memory, by a page or by a tool.
+file_put_contents($root.'/brain/topics/huge.md', str_repeat('a', 1024 * 1024 + 1));
+$expect('a note larger than 1 MB is not read', $rejects(fn () => $brain->read('brain/topics/huge.md')));
+file_put_contents($root.'/brain/topics/huge.md', "# small\n");
+$expect('and a small one is', str_contains($brain->read('brain/topics/huge.md'), 'small'));
+
+// A file the Vault does not accept as a note path, dropped in by hand, must not break the list.
+$before = \count($brain->notes());
+file_put_contents($root.'/brain/topics/README.md', "# A readme\n");
+file_put_contents($root.'/brain/topics/My Note.md', "# Spaces\n");
+$expect('notes() skips files with a name the Vault refuses', $before === \count($brain->notes()));
 
 // No tool may reach setStatus, neither of the agents (src/Ai) nor of the MCP server (src/Mcp).
 foreach (array_merge(glob(__DIR__.'/../src/Ai/*.php'), glob(__DIR__.'/../src/Mcp/*.php')) as $toolFile) {

@@ -8,6 +8,9 @@ namespace App\Brain;
  */
 final class Vault
 {
+    /** A note is text. Anything bigger is not read into memory, whether a page or a tool asks for it. */
+    private const MAX_NOTE_BYTES = 1024 * 1024;
+
     public function __construct(private readonly string $root)
     {
     }
@@ -33,6 +36,10 @@ final class Vault
         $file = $this->resolve($path);
         if (!is_file($file)) {
             throw new \InvalidArgumentException(sprintf('There is no note "%s".', $path));
+        }
+
+        if (filesize($file) > self::MAX_NOTE_BYTES) {
+            throw new \InvalidArgumentException(sprintf('The note "%s" is larger than %d KB and is not read.', $path, self::MAX_NOTE_BYTES / 1024));
         }
 
         return (string) file_get_contents($file);

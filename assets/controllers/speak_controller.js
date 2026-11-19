@@ -15,7 +15,7 @@ export default class extends Controller {
                 body: JSON.stringify({ text: this.textTarget.textContent }),
             });
             if (!response.ok) {
-                button.textContent = (await response.json()).error ?? 'No voice available';
+                button.textContent = (await response.json().catch(() => ({}))).error ?? 'No voice available';
                 return;
             }
             this.audioTarget.src = URL.createObjectURL(await response.blob());

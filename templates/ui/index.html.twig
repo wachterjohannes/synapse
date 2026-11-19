@@ -18,7 +18,8 @@
                 <span class="text-sm text-muted" data-recorder-target="status"></span>
             </div>
         </form>
-        <twig:Terminal id="capture-out" />
+        {# empty:hidden, so there is no dark bar before the first answer arrives #}
+        <twig:Terminal id="capture-out" class="empty:hidden" />
     </twig:Panel>
 
     <twig:Panel title="Ask" class="mt-8">

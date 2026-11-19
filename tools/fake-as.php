@@ -2,7 +2,7 @@
 
 /**
  * A stand-in authorization server for local work, run with: php -S 127.0.0.1:8081 tools/fake-as.php
- * It knows two clients and hands out opaque tokens. Like a real server it binds a token to the brain
+ * It knows three clients (reader, admin, guest) and hands out opaque tokens. Like a real server it binds a token to the brain
  * named in the "resource" parameter (RFC 8707), which the brain checks as the aud claim. Use a real server (Keycloak, an OAuth bundle) in production.
  */
 
@@ -10,6 +10,8 @@ const CLIENTS = [
     // client id => [secret, scopes the client may get]
     'reader' => ['reader-secret', 'brain:read'],
     'admin' => ['admin-secret', 'brain:read brain:write'],
+    // a valid token without any brain scope, to see what the brain says to it
+    'guest' => ['guest-secret', 'openid'],
 ];
 const RESOURCE_SERVER = ['brain-server', 'brain-server-secret'];
 $store = sys_get_temp_dir().'/fake-as-tokens.json';

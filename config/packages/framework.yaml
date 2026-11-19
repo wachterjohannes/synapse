@@ -2,6 +2,23 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
+    # The page and the MCP endpoint answer only to these host names, see TRUSTED_HOSTS in .env.
+    # A request for any other host is refused with 400 before a route sees it.
+    trusted_hosts: ['%env(TRUSTED_HOSTS)%']
+
+    # A model with tools can take half a minute or more for one answer, and the default of 60 seconds without a
+    # byte is too tight for a trial key at a busy hour. The introspection call of the MCP endpoint sets a limit of its own.
+    http_client:
+        default_options:
+            timeout: 120
+
+    # Every question, capture, read-aloud and recording of the browser page is a paid call. This caps how fast they can come.
+    rate_limiter:
+        ui_paid:
+            policy: sliding_window
+            limit: 20
+            interval: '1 minute'
+
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 

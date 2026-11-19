@@ -6,6 +6,10 @@ export default class extends Controller {
     static values = { url: String };
 
     recorder = null;
+    timer = null;
+
+    // The server takes recordings up to 10 MB. A few minutes of speech is far below that, so stop before.
+    static maxSeconds = 240;
 
     async toggle() {
         if (this.recorder) {
@@ -19,6 +23,7 @@ export default class extends Controller {
             this.recorder.ondataavailable = (event) => chunks.push(event.data);
             this.recorder.onstop = () => this.transcribe(stream, new Blob(chunks, { type: this.recorder.mimeType }));
             this.recorder.start();
+            this.timer = setTimeout(() => this.recorder?.stop(), this.constructor.maxSeconds * 1000);
             this.buttonTarget.textContent = 'Stop';
             this.buttonTarget.dataset.recording = 'true';
         } catch (error) {
@@ -27,6 +32,7 @@ export default class extends Controller {
     }
 
     async transcribe(stream, blob) {
+        clearTimeout(this.timer);
         stream.getTracks().forEach((track) => track.stop());
         this.recorder = null;
         this.buttonTarget.textContent = 'Record';
@@ -35,13 +41,18 @@ export default class extends Controller {
 
         const form = new FormData();
         form.append('audio', blob, 'speech.webm');
-        const response = await fetch(this.urlValue, { method: 'POST', headers: { 'X-Synapse-Ui': '1' }, body: form });
-        const data = await response.json();
-        if (!response.ok) {
-            this.statusTarget.textContent = data.error ?? 'Could not understand that.';
-            return;
+        try {
+            const response = await fetch(this.urlValue, { method: 'POST', headers: { 'X-Synapse-Ui': '1' }, body: form });
+            // a body the server refuses before the app runs (too big for PHP) is not JSON
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                this.statusTarget.textContent = data.error ?? 'Could not understand that.';
+                return;
+            }
+            this.textTarget.value = data.text;
+            this.statusTarget.textContent = '';
+        } catch (error) {
+            this.statusTarget.textContent = `Could not send the recording: ${error.message}`;
         }
-        this.textTarget.value = data.text;
-        this.statusTarget.textContent = '';
     }
 }

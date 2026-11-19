@@ -41,7 +41,13 @@ final class Brain
         $notes = [];
         foreach ($this->vault->list() as $path) {
             if (str_starts_with($path, 'brain/') && !\in_array(basename($path), ['index.md', 'log.md'], true)) {
-                $notes[] = $this->note($path);
+                try {
+                    $notes[] = $this->note($path);
+                } catch (\InvalidArgumentException) {
+                    // A file somebody dropped into the folder, like README.md or "My Note.md", is not a path the Vault accepts.
+                    // One such file must not take the whole list down.
+                    continue;
+                }
             }
         }
 

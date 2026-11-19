@@ -34,8 +34,14 @@ if [ -e var/smoke-notes ]; then
 fi
 cp -a notes var/smoke-notes || { echo "could not back up notes/" >&2; exit 1; }
 PIDS=""
+# stream ids and rate limit state live in the cache of a server: a run must not inherit them from the one before
+rm -rf var/cache-ui var/cache-down var/share-ui var/share-down
 cleanup() {
-    [ -n "$PIDS" ] && kill $PIDS 2>/dev/null
+    # php -S with PHP_CLI_SERVER_WORKERS leaves its workers behind when only the main process is stopped
+    for PID in $PIDS; do
+        pkill -P "$PID" 2>/dev/null
+        kill "$PID" 2>/dev/null
+    done
     rm -rf notes && mv var/smoke-notes notes
 }
 trap cleanup EXIT
@@ -66,9 +72,18 @@ if php bin/console list app --raw | grep -q '^app:ask'; then
     fi
 fi
 
+# free_port PORT: stops the run when something already answers there. Otherwise the checks would talk to a server
+# of an earlier run, with its old notes, its old password and its old code.
+free_port() {
+    if curl -s -o /dev/null --max-time 1 http://127.0.0.1:$1/; then
+        echo "port $1 is already in use. Stop that server (an earlier run may have left one) and run again." >&2
+        exit 1
+    fi
+}
 # serve NAME PORT: starts the app on a port. The variables go through the environment, which php -S
 # only passes on when variables_order contains E.
 serve() {
+    free_port $2
     php -d variables_order=EGPCS -S 127.0.0.1:$2 -t public public/index.php >/dev/null 2>&1 &
     PIDS="$PIDS $!"
 }
@@ -91,9 +106,16 @@ if php bin/console debug:router --raw 2>/dev/null | grep -q '/mcp'; then
     PORT=${BRAIN_PORT:-38591}; AS_PORT=${AS_PORT:-38592}
     MCP=http://127.0.0.1:$PORT/mcp
     export OAUTH_INTROSPECTION_URL=http://127.0.0.1:$AS_PORT/introspect OAUTH_AUDIENCE=$MCP OAUTH_ISSUER=http://127.0.0.1:$AS_PORT
+    free_port $AS_PORT
     php -S 127.0.0.1:$AS_PORT tools/fake-as.php >/dev/null 2>&1 &
     PIDS="$PIDS $!"
     APP_CACHE_DIR=$PWD/var/cache-smoke serve brain $PORT
+    # a second brain whose authorization server does not exist: nothing listens on DEAD_PORT
+    DOWN_PORT=${DOWN_PORT:-38593}; DEAD_PORT=${DEAD_PORT:-38599}
+    free_port $DEAD_PORT
+    # The rate limit keeps its count in the share dir, so every server that is tried against it gets its own.
+    # it also serves the UI, with a dummy Cohere key and no ElevenLabs key: the page can be looked at and the rate limit tried without a paid call
+    UI_PASSWORD=smoke-ui COHERE_API_KEY=smoke-dummy ELEVENLABS_API_KEY= OAUTH_INTROSPECTION_URL=http://127.0.0.1:$DEAD_PORT/introspect APP_CACHE_DIR=$PWD/var/cache-down APP_SHARE_DIR=$PWD/var/share-down serve down $DOWN_PORT
     sleep 2
     CHALLENGE=$(curl -si -X POST $MCP -H 'Content-Type: application/json' -d '{}' | tr -d '\r')
     check "MCP without a token is 401" "echo \"\$CHALLENGE\" | head -1 | grep -q ' 401'"
@@ -103,7 +125,13 @@ if php bin/console debug:router --raw 2>/dev/null | grep -q '/mcp'; then
     SLASHES=$(curl -s http://127.0.0.1:$PORT/.well-known/oauth-protected-resource)
     check "the metadata keeps its slashes" "echo \"\$SLASHES\" | grep -q '\"resource\":\"http://127.0.0.1:$PORT/mcp\"'"
     check "the metadata names the authorization server" "curl -s http://127.0.0.1:$PORT/.well-known/oauth-protected-resource | grep -q authorization_servers"
-    READER=$(token reader $MCP); ADMIN=$(token admin $MCP)
+    check "the 401 names the scope that opens the endpoint" "echo \"\$CHALLENGE\" | grep -qi 'scope=\"brain:read\"'"
+    check "the metadata is also served below the path of the resource (RFC 9728)" "curl -s http://127.0.0.1:$PORT/.well-known/oauth-protected-resource/mcp | grep -q authorization_servers"
+    check "the path variant knows no other path" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$PORT/.well-known/oauth-protected-resource/other)\" = 404 ]"
+    READER=$(token reader $MCP); ADMIN=$(token admin $MCP); GUEST=$(token guest $MCP)
+    GUEST_ANSWER=$(curl -si -X POST $MCP -H "Authorization: Bearer $GUEST" -H 'Content-Type: application/json' -d '{}' | tr -d '\r')
+    check "a valid token without a brain scope is 403 with insufficient_scope" "echo \"\$GUEST_ANSWER\" | head -1 | grep -q ' 403' && echo \"\$GUEST_ANSWER\" | grep -qi '^www-authenticate: .*error=\"insufficient_scope\"'"
+    check "an authorization server that cannot be reached is 503, not 401" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:$DOWN_PORT/mcp -H \"Authorization: Bearer $READER\" -H 'Content-Type: application/json' -d '{}')\" = 503 ]"
     INIT='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}'
     check "MCP initialize works with a valid token" "mcp $MCP $READER '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}' | grep -q search_notes"
     OTHER=$(token reader http://127.0.0.1:1/other-brain/mcp)
@@ -150,13 +178,33 @@ if [ -f src/Controller/UiController.php ]; then
     check "the stylesheet builds" "php bin/console tailwind:build"
     UI_PORT=${UI_PORT:-38601}; UI=http://127.0.0.1:$UI_PORT
     # php -S needs workers here, because an answer streams while the page loads its assets
-    UI_PASSWORD=smoke-ui PHP_CLI_SERVER_WORKERS=4 APP_CACHE_DIR=$PWD/var/cache-ui serve ui $UI_PORT
+    UI_PASSWORD=smoke-ui PHP_CLI_SERVER_WORKERS=4 APP_CACHE_DIR=$PWD/var/cache-ui APP_SHARE_DIR=$PWD/var/share-ui serve ui $UI_PORT
     sleep 2
     check "the UI wants a password" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' $UI/)\" = 401 ]"
+    check "a request for another host name is refused" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -H 'Host: evil.example:$UI_PORT' $UI/)\" = 400 ]"
     check "the UI opens with the password" "[ \"\$(curl -s -u synapse:smoke-ui $UI/ | grep -c 'Your second brain')\" = 1 ]"
     check "the UI serves its stylesheet" "curl -s -u synapse:smoke-ui $UI/ | grep -o '/assets/styles/app-[^\"]*.css' | head -1 | xargs -I{} curl -sf -o /dev/null $UI{}"
     check "a request from another site is refused" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/capture -H 'Sec-Fetch-Site: cross-site' -d text=x)\" = 403 ]"
     check "a request without a sign of this page is refused" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/capture -d text=x)\" = 403 ]"
+    HEADERS=$(curl -si -u synapse:smoke-ui $UI/ | tr -d '\r')
+    check "the page has a CSP with a nonce, and may not be framed" "echo \"\$HEADERS\" | grep -qi \"^content-security-policy: .*script-src 'self' 'nonce-\" && echo \"\$HEADERS\" | grep -qi \"frame-ancestors 'none'\" && echo \"\$HEADERS\" | grep -qi '^x-frame-options: DENY'"
+    check "every script of the page carries the nonce" "[ \"\$(curl -s -u synapse:smoke-ui $UI/ | grep -o '<script[^>]*>' | grep -vc nonce)\" = 0 ]"
+    check "an empty capture is answered without a model" "curl -s -u synapse:smoke-ui -X POST $UI/ui/capture -H 'X-Synapse-Ui: 1' -d text= | grep -q 'Write something first'"
+    check "a capture that is too long is refused" "curl -s -u synapse:smoke-ui -X POST $UI/ui/capture -H 'X-Synapse-Ui: 1' --data-urlencode \"text=\$(head -c 9000 /dev/zero | tr '\\0' a)\" | grep -q 'too long'"
+    ASK=$(curl -s -u synapse:smoke-ui -X POST http://127.0.0.1:$DOWN_PORT/ui/ask -H 'X-Synapse-Ui: 1' -d question=hello)
+    CARD=$(echo "$ASK" | grep -o 'id="answer-[0-9a-f]\{8\}"' | head -1 | sed 's/id="answer-\(.*\)"/\1/')
+    check "an answer card shows a waiting hint with the id the stream removes, and opens its stream" "[ -n \"\$CARD\" ] && echo \"\$ASK\" | grep -q \"id=\\\"answer-\$CARD-wait\\\"\" && echo \"\$ASK\" | grep -q \"ask/\$CARD/stream\""
+    check "an empty question is turned down without a stream" "curl -s -u synapse:smoke-ui -X POST $UI/ui/ask -H 'X-Synapse-Ui: 1' -d question= | grep -q 'Ask something first' && ! curl -s -u synapse:smoke-ui -X POST $UI/ui/ask -H 'X-Synapse-Ui: 1' -d question= | grep -q turbo-stream-source"
+    check "a stream without a question is refused" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -H 'X-Synapse-Ui: 1' \"$UI/ui/ask/abcd0000/stream?q=\")\" = 400 ]"
+    check "speak refuses a text that is not a string" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/speak -H 'X-Synapse-Ui: 1' -H 'Content-Type: application/json' -d '{\"text\":[\"a\"]}')\" = 400 ]"
+    check "speak refuses a text that is too long" "[ \"\$(head -c 5000 /dev/zero | tr '\\0' a | sed 's/^/{\"text\":\"/; s/\$/\"}/' | curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST $UI/ui/speak -H 'X-Synapse-Ui: 1' -H 'Content-Type: application/json' --data-binary @-)\" = 413 ]"
+    printf 'not audio' > var/smoke-not-audio.txt
+    check "transcribe refuses a file that is not audio" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -H 'X-Synapse-Ui: 1' -F audio=@var/smoke-not-audio.txt $UI/ui/transcribe)\" = 415 ]"
+    check "transcribe wants a file" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -X POST -H 'X-Synapse-Ui: 1' $UI/ui/transcribe)\" = 400 ]"
+    rm -f var/smoke-not-audio.txt
+    # the "down" server has no ElevenLabs key, so every call is refused after the limit took its token, and none costs anything
+    LIMIT_CODES=$(for i in $(seq 1 26); do curl -s -o /dev/null -w '%{http_code}\n' -u synapse:smoke-ui -X POST http://127.0.0.1:$DOWN_PORT/ui/speak -H 'X-Synapse-Ui: 1' -H 'Content-Type: application/json' -d '{"text":"hello"}'; done)
+    check "the rate limit turns away the calls over the limit" "echo \"\$LIMIT_CODES\" | grep -q '^429\$'"
     if grep -q "'ui_notes'" src/Controller/NotesController.php; then
         printf -- '---\ntype: Topic\ntitle: "Smoke status"\ndescription: "A draft for the status checks."\ntags: [smoke]\nstatus: draft\ngenerated:\n  by: synapse/1.0\n  at: 2026-11-01T08:00:00Z\n---\n\n# Smoke status\n\nSee [RAG](/topics/rag-basics.md).\n' > notes/brain/topics/smoke-status.md
         NOTE=brain/topics/smoke-status.md
@@ -175,14 +223,18 @@ if [ -f src/Controller/UiController.php ]; then
         check "both changes are in log.md" "grep -q 'status of $NOTE: draft to verified' notes/brain/log.md && grep -q 'status of $NOTE: verified to stable' notes/brain/log.md"
     fi
     if [ $LIVE = 1 ]; then
+        # every stream answers once, so every try gets a new id
         for TRY in 1 2 3; do
-            curl -sN -m 120 -u synapse:smoke-ui -H 'X-Synapse-Ui: 1' "$UI/ui/ask/abcd1234/stream?q=What+breaks+when+I+upgrade+to+Symfony+AI+1.0+beta%3F" > var/smoke-stream.txt
-            grep -q 'action="remove" target="answer-abcd1234-source"' var/smoke-stream.txt && grep -q 'symfony-ai-1-0-beta1.md' var/smoke-stream.txt && break
+            SID=$(printf '%07x' $((RANDOM*RANDOM)) | cut -c1-7)$TRY
+            curl -sN -m 240 -u synapse:smoke-ui -H 'X-Synapse-Ui: 1' "$UI/ui/ask/$SID/stream?q=What+breaks+when+I+upgrade+to+Symfony+AI+1.0+beta%3F" > var/smoke-stream.txt
+            grep -q "action=\"remove\" target=\"answer-$SID-source\"" var/smoke-stream.txt && grep -q 'symfony-ai-1-0-beta1.md' var/smoke-stream.txt && break
         done
         check "the UI streams the answer word by word" "[ \"\$(grep -c 'action=\"append\"' var/smoke-stream.txt)\" -gt 5 ]"
         # the words arrive in pieces, so the text is put back together before it is searched
         check "the stream names the source" "grep 'action=\"append\"' var/smoke-stream.txt | sed 's/<[^>]*>//g; s/^data: //' | tr -d '\\n' | grep -q 'symfony-ai-1-0-beta1.md'"
-        check "the stream ends by closing its own source" "grep -q 'action=\"remove\" target=\"answer-abcd1234-source\"' var/smoke-stream.txt"
+        check "the stream ends by closing its own source" "grep -q \"action=\\\"remove\\\" target=\\\"answer-$SID-source\\\"\" var/smoke-stream.txt"
+        check "the stream takes the waiting hint away" "grep -q \"action=\\\"remove\\\" target=\\\"answer-$SID-wait\\\"\" var/smoke-stream.txt"
+        check "a second request for the same stream is not answered again (204)" "[ \"\$(curl -s -o /dev/null -w '%{http_code}' -u synapse:smoke-ui -H 'X-Synapse-Ui: 1' \"$UI/ui/ask/$SID/stream?q=again\")\" = 204 ]"
         rm -f var/smoke-stream.txt
         if [ -n "${ELEVENLABS_API_KEY:-}" ]; then
             check "the UI reads an answer aloud" "[ \"\$(curl -s -o var/smoke-answer.mp3 -w '%{content_type}' -u synapse:smoke-ui -X POST $UI/ui/speak -H 'X-Synapse-Ui: 1' -H 'Content-Type: application/json' -d '{\"text\":\"Hello from the brain.\"}')\" = audio/mpeg ]"

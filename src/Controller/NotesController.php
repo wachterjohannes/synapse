@@ -122,8 +122,7 @@ final class NotesController
     /** @param array<string, mixed> $context */
     private function page(string $template, array $context, int $status = 200): Response
     {
-        return new Response($this->twig->render($template, $context), $status, [
-            'Content-Security-Policy' => "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' data:; img-src 'self' data:",
-        ]);
+        // the security headers of the page come from App\EventListener\UiHeaders
+        return new Response($this->twig->render($template, $context), $status);
     }
 }

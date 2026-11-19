@@ -15,8 +15,20 @@ final class ListNotes
     {
     }
 
-    public function __invoke(): string
+    /**
+     * The parameter is optional and only there so that the tool has a schema with properties. Symfony AI 1.0.0-BETA1
+     * leaves "parameters" out for a tool without arguments, and the Hugging Face router answers that with a 422
+     * (symfony/ai#2846, fixed in #2848 after BETA1). Drop the parameter once a release contains that fix.
+     *
+     * @param string $folder "brain" or "inbox" to list only that folder, empty for both
+     */
+    public function __invoke(string $folder = ''): string
     {
-        return implode("\n", $this->brain->listAll()) ?: 'No notes yet.';
+        $paths = $this->brain->listAll();
+        if ('' !== $folder) {
+            $paths = array_values(array_filter($paths, static fn (string $path): bool => str_starts_with($path, rtrim($folder, '/').'/')));
+        }
+
+        return implode("\n", $paths) ?: 'No notes yet.';
     }
 }

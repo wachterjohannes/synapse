@@ -1,11 +1,18 @@
 {# A new answer card. The turbo-stream-source opens the event stream that fills it word by word. #}
+{# Without a source the card only shows why the question was not asked. #}
+{# "id" means something else inside the Terminal component, so the id of the card is kept under another name. #}
+{% set card = id %}
 <turbo-stream action="prepend" target="answers">
     <template>
         <div id="answer-{{ id }}" data-controller="speak" data-speak-url-value="{{ path('ui_speak') }}">
             <p class="mb-1 text-sm text-muted">{{ question }}</p>
-            <twig:Terminal id="answer-{{ id }}-text" data-speak-target="text" />
-            <div id="answer-{{ id }}-actions" class="mt-2"></div>
-            <turbo-stream-source id="answer-{{ id }}-source" src="{{ path('ui_ask_stream', {id: id, q: question}) }}"></turbo-stream-source>
+            {% if problem %}
+                <twig:Terminal id="answer-{{ id }}-text" data-speak-target="text">{{ problem }}</twig:Terminal>
+            {% else %}
+                <twig:Terminal id="answer-{{ id }}-text" data-speak-target="text"><span id="answer-{{ card }}-wait" class="animate-pulse text-slate-500">Thinking...</span></twig:Terminal>
+                <div id="answer-{{ id }}-actions" class="mt-2"></div>
+                <turbo-stream-source id="answer-{{ id }}-source" src="{{ path('ui_ask_stream', {id: id, q: question}) }}"></turbo-stream-source>
+            {% endif %}
         </div>
     </template>
 </turbo-stream>
