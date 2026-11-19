@@ -41,3 +41,8 @@ services:
         arguments:
             $inner: '@ai.vectorizer.brain'
             $queryOptions: '%query_options%'
+
+when@test:
+    services:
+        App\Tests\Support\MockResponses:
+            public: true

@@ -31,3 +31,6 @@ when@test:
         test: true
         session:
             storage_factory_id: session.storage.factory.mock_file
+        # No test may reach a provider: every call of the HTTP client lands in the queue of the test.
+        http_client:
+            mock_response_factory: App\Tests\Support\MockResponses
