@@ -1,6 +1,8 @@
 # Hugging Face Inference Providers. Needs HUGGINGFACE_API_KEY. The index lives in its own file because
 # the vectors have another size than the Cohere ones, run ai:store:setup brain and ai:store:index brain once.
 parameters:
+    # BETA1 cannot stream a tool call from the router (a chunk without function.name, symfony/ai), so the page gets the answer in one piece.
+    stream_answers: false
     default_db: '%kernel.project_dir%/var/brain-huggingface.sqlite'
     # These embedding models make no difference between documents and queries.
     query_options: []

@@ -7,6 +7,7 @@ use App\Security\UiGuard;
 use App\Voice\Speech;
 use Symfony\AI\Agent\AgentInterface;
 use Symfony\AI\Platform\Result\Stream\Delta\TextDelta;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\Target;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -49,6 +50,8 @@ final class UiController
         private readonly UiGuard $ui,
         private readonly ProviderKey $keys,
         private readonly CacheInterface $cache,
+        #[Autowire('%stream_answers%')]
+        private readonly bool $streamAnswers,
     ) {
     }
 
@@ -152,11 +155,16 @@ final class UiController
                 }
             };
             try {
-                foreach ($this->reader->call($question, ['stream' => true])->getContent() as $delta) {
-                    // the stream opens with empty deltas, long before the first word: the hint stays until there is text
-                    if ($delta instanceof TextDelta && '' !== $delta->getText()) {
-                        $stopWaiting();
-                        $this->send($this->fragment('append', 'answer-'.$id.'-text', htmlspecialchars($delta->getText())));
+                if (!$this->streamAnswers) {
+                    $this->send($this->fragment('append', 'answer-'.$id.'-text', htmlspecialchars($this->reader->call($question)->getContent())));
+                    $stopWaiting();
+                } else {
+                    foreach ($this->reader->call($question, ['stream' => true])->getContent() as $delta) {
+                        // the stream opens with empty deltas, long before the first word: the hint stays until there is text
+                        if ($delta instanceof TextDelta && '' !== $delta->getText()) {
+                            $stopWaiting();
+                            $this->send($this->fragment('append', 'answer-'.$id.'-text', htmlspecialchars($delta->getText())));
+                        }
                     }
                 }
             } catch (\Throwable $e) {

@@ -1,5 +1,6 @@
 # The default provider. Embeddings and both agents run on Cohere.
 parameters:
+    stream_answers: true
     default_db: '%kernel.project_dir%/var/brain-cohere.sqlite'
     # Cohere embeds documents and queries differently, the retriever asks for the query side.
     query_options:

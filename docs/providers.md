@@ -8,6 +8,8 @@ I ran indexing, questions and capturing on Hugging Face. The default model is `o
 
 `list_notes` takes an optional `folder` argument for a reason: Symfony AI 1.0.0-BETA1 sends a tool without arguments without a `parameters` field, and the Hugging Face router refuses that with a 422 (symfony/ai#2846, fixed in #2848 after BETA1).
 
+The page shows an answer from Hugging Face in one piece and not word by word (`stream_answers: false` in `config/providers/huggingface.yaml`). Symfony AI 1.0.0-BETA1 fails on a streamed tool call from the router with "Undefined array key name". Cohere streams.
+
 ## Voice
 
 With `ELEVENLABS_API_KEY` set, the microphone in the page fills the text field and "Read it aloud" plays the answer. On the command line:
