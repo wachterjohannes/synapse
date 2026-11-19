@@ -92,6 +92,16 @@ serve() {
     php -d variables_order=EGPCS -S 127.0.0.1:$2 -t public public/index.php >/dev/null 2>&1 &
     PIDS="$PIDS $!"
 }
+# wait_up PORT...: waits until each server answers. The first request also builds its cache, so the checks do not
+# race a cold server (a fixed sleep was too short on a slow machine).
+wait_up() {
+    for p in "$@"; do
+        for _ in $(seq 1 60); do
+            curl -s -o /dev/null --max-time 30 http://127.0.0.1:$p/ && break
+            sleep 0.5
+        done
+    done
+}
 # token CLIENT RESOURCE: asks the fake authorization server for a token that is meant for RESOURCE
 token() {
     curl -s -X POST http://127.0.0.1:$AS_PORT/token -d client_id=$1 -d client_secret=$1-secret -d resource=$2 | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
@@ -121,7 +131,7 @@ if php bin/console debug:router --raw 2>/dev/null | grep -q '/mcp'; then
     # The rate limit keeps its count in the share dir, so every server that is tried against it gets its own.
     # it also serves the UI, with a dummy Cohere key and no ElevenLabs key: the page can be looked at and the rate limit tried without a paid call
     UI_PASSWORD=smoke-ui COHERE_API_KEY=smoke-dummy ELEVENLABS_API_KEY= OAUTH_INTROSPECTION_URL=http://127.0.0.1:$DEAD_PORT/introspect APP_CACHE_DIR=$PWD/var/cache-down APP_SHARE_DIR=$PWD/var/share-down serve down $DOWN_PORT
-    sleep 2
+    wait_up $PORT $DOWN_PORT
     CHALLENGE=$(curl -si -X POST $MCP -H 'Content-Type: application/json' -d '{}' | tr -d '\r')
     check "MCP without a token is 401" "echo \"\$CHALLENGE\" | head -1 | grep -q ' 401'"
     check "the 401 points to the protected resource metadata" "echo \"\$CHALLENGE\" | grep -qi '^www-authenticate: Bearer resource_metadata=.*oauth-protected-resource'"
@@ -189,7 +199,7 @@ if [ -f src/Controller/UiController.php ]; then
     UI_PORT=${UI_PORT:-38601}; UI=http://127.0.0.1:$UI_PORT
     # php -S needs workers here, because an answer streams while the page loads its assets
     UI_PASSWORD=smoke-ui PHP_CLI_SERVER_WORKERS=4 APP_CACHE_DIR=$PWD/var/cache-ui APP_SHARE_DIR=$PWD/var/share-ui serve ui $UI_PORT
-    sleep 2
+    wait_up $UI_PORT
     check "the UI sends a visitor to the login page" "[ \"\$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' $UI/)\" = '302 $UI/login' ]"
     JAR=var/smoke-cookies.txt; rm -f $JAR
     csrf() { curl -s -c $JAR -b $JAR $UI/login | grep -o 'name="_csrf_token" value="[^"]*"' | sed 's/.*value="//; s/"//'; }
@@ -246,7 +256,8 @@ if [ -f src/Controller/UiController.php ]; then
         check "app:status refuses an unknown status" "! php bin/console app:status $NOTE approved </dev/null"
         check "both changes are in log.md" "grep -q 'status of $NOTE: draft to verified' notes/brain/log.md && grep -q 'status of $NOTE: verified to stable' notes/brain/log.md"
     fi
-    DOCTOR=$(php bin/console app:doctor </dev/null 2>&1); DOCTOR_RC=$?
+    # without the keys of the run, so that the missing key is what the doctor reports, also in live mode
+    DOCTOR=$(env -u COHERE_API_KEY -u HUGGINGFACE_API_KEY -u SYNAPSE_PROVIDER php bin/console app:doctor </dev/null 2>&1); DOCTOR_RC=$?
     check "app:doctor says what is missing and exits with 1" "[ $DOCTOR_RC = 1 ] && echo \"\$DOCTOR\" | grep -q 'COHERE_API_KEY=<your key>'"
     NOTES_PAGE=$(curl -s -u synapse:smoke-ui $UI/ui/notes)
     check "the notes page is a live component" "echo \"\$NOTES_PAGE\" | grep -q 'data-controller=\"live\"'"
