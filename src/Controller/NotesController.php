@@ -36,6 +36,7 @@ final class NotesController
         if (null !== $off = $this->ui->disabled()) {
             return $off;
         }
+
         // the list is a live component, it reads ?query= and ?status= itself
         return $this->page('notes/list.html.twig', []);
     }

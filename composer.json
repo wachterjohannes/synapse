@@ -86,7 +86,9 @@
             "@auto-scripts"
         ],
         "test": "phpunit",
-        "stan": "phpstan analyse"
+        "stan": "phpstan analyse",
+        "cs": "php-cs-fixer fix --dry-run --diff",
+        "cs:fix": "php-cs-fixer fix"
     },
     "conflict": {
         "symfony/symfony": "*"

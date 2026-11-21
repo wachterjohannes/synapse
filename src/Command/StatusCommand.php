@@ -23,7 +23,7 @@ final class StatusCommand
     public function __invoke(
         SymfonyStyle $io,
         #[Argument('The note, for example brain/topics/mcp.md or topics/mcp.md')] ?string $path = null,
-        #[Argument('The new status: '.'draft, stable, verified or deprecated')] ?string $status = null,
+        #[Argument('The new status: draft, stable, verified or deprecated')] ?string $status = null,
         #[Option('Only list the notes with this status')] ?string $list = null,
     ): int {
         if (null === $path) {

@@ -69,7 +69,7 @@ final class Vault
      * The one exception to "never replace": log.md has to be rewritten, because its newest day goes on top.
      * The file is locked from reading to writing, so two writers cannot lose each other's change.
      *
-     * @param callable(string): string $change gets the current content and returns the new one
+     * @param callable(string): string $change  gets the current content and returns the new one
      * @param string|null              $initial content to start with when the note does not exist yet
      */
     public function update(string $path, callable $change, ?string $initial = null): void

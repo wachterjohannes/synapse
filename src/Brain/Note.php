@@ -11,7 +11,7 @@ use Symfony\Component\Yaml\Yaml;
 final class Note
 {
     /**
-     * @param list<string>                          $tags
+     * @param list<string>                              $tags
      * @param list<array{id: string, resource: string}> $sources
      */
     public function __construct(
