@@ -26,7 +26,7 @@ final class UiGuardTest extends TestCase
         $response = $this->guard('')->disabled();
 
         self::assertSame(503, $response?->getStatusCode());
-        self::assertStringContainsString('setup page with 10 checks', (string) $response?->getContent());
+        self::assertStringContainsString('setup page with 10 checks', (string) $response->getContent());
     }
 
     public function testTheUiIsOnWithAPassword(): void
@@ -41,7 +41,7 @@ final class UiGuardTest extends TestCase
         $response = $this->guard('')->guard($request);
 
         self::assertSame(503, $response?->getStatusCode());
-        self::assertStringContainsString('UI_PASSWORD', (string) $response?->getContent(), 'A request that is not a page gets the short text.');
+        self::assertStringContainsString('UI_PASSWORD', (string) $response->getContent(), 'A request that is not a page gets the short text.');
     }
 
     public function testASameOriginRequestPasses(): void
@@ -92,21 +92,28 @@ final class UiGuardTest extends TestCase
         $guard = $this->guard(limit: 2);
         $request = Request::create('/', server: ['REMOTE_ADDR' => '203.0.113.5']);
 
-        self::assertNull($guard->throttle($request));
-        self::assertNull($guard->throttle($request));
+        $first = $guard->throttle($request);
+        $second = $guard->throttle($request);
         $limited = $guard->throttle($request);
 
+        self::assertNull($first);
+        self::assertNull($second);
+
         self::assertSame(429, $limited?->getStatusCode());
-        self::assertGreaterThanOrEqual(1, (int) $limited?->headers->get('Retry-After'));
-        self::assertStringContainsString('Too many requests', (string) $limited?->getContent());
+        self::assertGreaterThanOrEqual(1, (int) $limited->headers->get('Retry-After'));
+        self::assertStringContainsString('Too many requests', (string) $limited->getContent());
     }
 
     public function testEachClientHasItsOwnBudget(): void
     {
         $guard = $this->guard(limit: 1);
 
-        self::assertNull($guard->throttle(Request::create('/', server: ['REMOTE_ADDR' => '203.0.113.5'])));
-        self::assertNull($guard->throttle(Request::create('/', server: ['REMOTE_ADDR' => '203.0.113.6'])));
-        self::assertSame(429, $guard->throttle(Request::create('/', server: ['REMOTE_ADDR' => '203.0.113.5']))?->getStatusCode());
+        $firstClient = $guard->throttle(Request::create('/', server: ['REMOTE_ADDR' => '203.0.113.5']));
+        $otherClient = $guard->throttle(Request::create('/', server: ['REMOTE_ADDR' => '203.0.113.6']));
+        $firstClientAgain = $guard->throttle(Request::create('/', server: ['REMOTE_ADDR' => '203.0.113.5']));
+
+        self::assertNull($firstClient);
+        self::assertNull($otherClient);
+        self::assertSame(429, $firstClientAgain?->getStatusCode());
     }
 }

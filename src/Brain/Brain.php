@@ -134,7 +134,7 @@ final class Brain
         );
         if ([] !== $sources) {
             $frontmatter .= "sources:\n";
-            foreach (array_values($sources) as $i => $source) {
+            foreach ($sources as $i => $source) {
                 $frontmatter .= sprintf("  - id: s%d\n    resource: %s\n", $i + 1, $this->scalar($source));
             }
         }

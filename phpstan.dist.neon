@@ -1,0 +1,18 @@
+parameters:
+    level: 6
+    paths:
+        - src
+        - tests
+    ignoreErrors:
+        # The indexer from config/packages/ai.yaml reads its own source, so index() is called without input.
+        # IndexerInterface still lists $input as required, the configured indexer accepts null.
+        -
+            identifier: arguments.count
+            path: src/Brain/Reindexer.php
+            count: 1
+        # configureDefaults() is the MicroKernelTrait alias from the Symfony recipe. PHPStan does not resolve
+        # its real signature through the alias. The call is covered by every functional test.
+        -
+            identifier: arguments.count
+            path: src/Kernel.php
+            count: 1

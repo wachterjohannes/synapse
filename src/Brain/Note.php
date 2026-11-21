@@ -34,7 +34,7 @@ final class Note
         $body = $content;
         if (preg_match('/\A---\n(.*?\n)?---\n(.*)\z/s', $content, $m)) {
             try {
-                $parsed = Yaml::parse($m[1] ?? '');
+                $parsed = Yaml::parse($m[1]);
                 $meta = \is_array($parsed) ? $parsed : [];
             } catch (ParseException) {
                 // A hand-edited note with broken frontmatter is still shown, just without its data.
