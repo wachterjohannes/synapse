@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, ci]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.4', '8.5']
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ctype, curl, iconv, intl, mbstring, pdo_sqlite
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v5
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - run: composer install --no-interaction --prefer-dist
+
+      - name: Code style
+        run: composer cs
+
+      - name: Static analysis
+        run: composer stan
+
+      - name: Tests
+        run: composer test
+
+      # No API keys here, so the smoke run only checks the wiring: the container, the commands, the UI and its guards.
+      # With COHERE_API_KEY set locally the same script lets the agents answer for real.
+      - name: Smoke (wiring only, no keys)
+        run: bin/smoke
