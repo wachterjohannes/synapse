@@ -4,9 +4,9 @@ namespace App\Ai;
 
 use App\Brain\Brain;
 use Mcp\Capability\Attribute\McpTool;
-use Mcp\Schema\ToolAnnotations;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 
+// No readOnlyHint on purpose: ToolGuard closes every tool without it to readers.
 #[McpTool(name: 'save_to_brain', description: 'Writes a finished concept document into the brain. Creates a new note, never replaces one.')]
 #[AsTool('save_to_brain', 'Writes a finished concept document into the brain (OKF format). Checks the format and returns an error that says what to fix. Creates a new note and never replaces an existing one.')]
 final class SaveToBrain
