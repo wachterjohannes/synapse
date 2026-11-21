@@ -17,7 +17,7 @@ The code is also the base of a [tutorial series](https://johanneswachter.dev/syn
 
 ## Run it in five minutes
 
-You need PHP 8.4 or newer and Composer. You also need one key: a `COHERE_API_KEY` ([dashboard.cohere.com](https://dashboard.cohere.com/api-keys), a trial key is enough) or a `HUGGINGFACE_API_KEY`. Voice needs an `ELEVENLABS_API_KEY` and is optional.
+You need PHP 8.4 or newer and Composer. You also need one key: a `COHERE_API_KEY` ([dashboard.cohere.com](https://dashboard.cohere.com/api-keys)) or a `HUGGINGFACE_API_KEY`. Mind the limit of the Cohere trial key, see below. Voice needs an `ELEVENLABS_API_KEY` and is optional.
 
 ```bash
 git clone https://github.com/wachterjohannes/synapse synapse
@@ -43,6 +43,13 @@ php bin/console app:status               # every note with its status
 ```
 
 A note you capture, and a status you change, is indexed right away. If the index gets out of step, see [Providers](docs/providers.md).
+
+
+### The Cohere trial key has a limit
+
+Sign up at [dashboard.cohere.com](https://dashboard.cohere.com/api-keys) and copy the trial key from the API keys page. It is free, and it is limited to **1000 API calls a month**. One question can use several calls (the embedding of the question, the steps of the agent and its answer), and so can indexing and capturing, so a few demo sessions can use it up. There is also a limit per minute, which a large folder hits while indexing ([the note](notes/brain/topics/cohere-trial-key.md)).
+
+When the limit is reached, Cohere answers `Rate limit exceeded`. Then `app:ask`, `app:capture` and the streamed answer in the page fail, while the rest of the page keeps working. Two ways out: create a production key on the same page, or run on Hugging Face with `SYNAPSE_PROVIDER=huggingface` ([providers](docs/providers.md)). Federation still reranks with Cohere.
 
 ## More
 
