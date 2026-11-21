@@ -258,8 +258,8 @@ if [ -f src/Controller/UiController.php ]; then
         check "app:status refuses an unknown status" "! php bin/console app:status $NOTE approved </dev/null"
         check "both changes are in log.md" "grep -q 'status of $NOTE: draft to verified' notes/brain/log.md && grep -q 'status of $NOTE: verified to stable' notes/brain/log.md"
     fi
-    # without the keys of the run, so that the missing key is what the doctor reports, also in live mode
-    DOCTOR=$(env -u COHERE_API_KEY -u HUGGINGFACE_API_KEY -u SYNAPSE_PROVIDER php bin/console app:doctor </dev/null 2>&1); DOCTOR_RC=$?
+    # Empty, not unset: Symfony reads .env.local for a variable that is unset, and the key would come back in live mode.
+    DOCTOR=$(COHERE_API_KEY= HUGGINGFACE_API_KEY= SYNAPSE_PROVIDER= php bin/console app:doctor </dev/null 2>&1); DOCTOR_RC=$?
     check "app:doctor says what is missing and exits with 1" "[ $DOCTOR_RC = 1 ] && echo \"\$DOCTOR\" | grep -q 'COHERE_API_KEY=<your key>'"
     NOTES_PAGE=$(curl -s -u synapse:smoke-ui $UI/ui/notes)
     check "the notes page is a live component" "echo \"\$NOTES_PAGE\" | grep -q 'data-controller=\"live\"'"
